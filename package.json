@@ -48,8 +48,7 @@
     "prepublishOnly": "npm run check"
   },
   "dependencies": {
-    "smol-toml": "^1.6.1",
-    "toml-patch": "^0.2.3"
+    "smol-toml": "^1.6.1"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",

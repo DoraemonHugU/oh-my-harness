@@ -4,13 +4,7 @@ import { promises as fs, type Dirent } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createRequire } from "node:module";
 import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
-
-const require = createRequire(import.meta.url);
-const TOML = require("toml-patch") as {
-  patch(existing: string, updated: unknown): string;
-};
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -151,9 +145,15 @@ async function ensureTargetRoot(options: InitOptions, summary: SummaryEntry[]): 
   }
 }
 
-function formatAgentsBlock(content: string): string {
-  const body = content.trimEnd();
-  return `${AGENTS_BEGIN}\n${body}\n${AGENTS_END}\n`;
+function extractAgentsBlock(content: string): string {
+  const escapedBegin = AGENTS_BEGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedEnd = AGENTS_END.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const blockPattern = new RegExp(`${escapedBegin}[\\s\\S]*?${escapedEnd}\\n?`, "m");
+  const matched = content.match(blockPattern);
+  if (!matched) {
+    throw new Error("templates/repo/AGENTS.md 缺少 oh-my-harness marker block");
+  }
+  return matched[0].endsWith("\n") ? matched[0] : `${matched[0]}\n`;
 }
 
 async function patchAgentsFile(options: InitOptions, summary: SummaryEntry[]): Promise<void> {
@@ -161,7 +161,7 @@ async function patchAgentsFile(options: InitOptions, summary: SummaryEntry[]): P
   const sourcePath = path.join(TEMPLATE_REPO_ROOT, "AGENTS.md");
   const targetPath = path.join(targetRoot, "AGENTS.md");
   const sourceContent = await fs.readFile(sourcePath, "utf8");
-  const block = formatAgentsBlock(sourceContent);
+  const block = extractAgentsBlock(sourceContent);
 
   if (!(await pathExists(targetPath))) {
     if (!dryRun) {
@@ -331,6 +331,32 @@ function asRecord(value: unknown, label: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function deepMergeObjects(
+  existing: Record<string, unknown>,
+  updated: Record<string, unknown>,
+): Record<string, unknown> {
+  const next = structuredClone(existing);
+
+  for (const [key, updatedValue] of Object.entries(updated)) {
+    const existingValue = next[key];
+    if (isPlainObject(existingValue) && isPlainObject(updatedValue)) {
+      next[key] = deepMergeObjects(existingValue, updatedValue);
+      continue;
+    }
+    next[key] = updatedValue;
+  }
+
+  return next;
+}
+
+function stringifyTomlDocument(value: Record<string, unknown>): string {
+  return `${stringifyToml(value).trim()}\n`;
+}
+
 function upsertAgentSections(
   existing: Record<string, unknown>,
   template: Record<string, unknown>,
@@ -416,9 +442,7 @@ async function patchCodexConfig(
       }
     }
   } else {
-    const nextConfig = existingConfig.trim()
-      ? TOML.patch(existingConfig, merged)
-      : `${stringifyToml(merged).trim()}\n`;
+    const nextConfig = stringifyTomlDocument(merged);
     if (!options.dryRun) {
       await fs.writeFile(configPath, nextConfig, "utf8");
     }
@@ -480,11 +504,13 @@ async function installAgentFiles(
 
     if (exists) {
       const existingText = await fs.readFile(targetPath, "utf8");
-      nextText = TOML.patch(existingText, templateObject);
+      const existingObject = parseToml(existingText) as Record<string, unknown>;
+      const mergedObject = deepMergeObjects(existingObject, templateObject as Record<string, unknown>);
+      nextText = stringifyTomlDocument(mergedObject);
       actionKind = "patched";
       detail = "patch 覆盖 agent TOML";
     } else {
-      nextText = `${stringifyToml(templateObject).trim()}\n`;
+      nextText = stringifyTomlDocument(templateObject as Record<string, unknown>);
       actionKind = "created";
       detail = "写入 agent TOML";
     }
