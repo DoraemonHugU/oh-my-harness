@@ -1,0 +1,58 @@
+{
+  "name": "@doraemon-hug-u/oh-my-harness",
+  "version": "0.0.1",
+  "description": "Chinese-first Codex PR-first / plan-first implementation harness.",
+  "license": "MIT",
+  "author": "doraemon-hug-u",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DoraemonHugU/oh-my-harness.git"
+  },
+  "homepage": "https://github.com/DoraemonHugU/oh-my-harness#readme",
+  "bugs": {
+    "url": "https://github.com/DoraemonHugU/oh-my-harness/issues"
+  },
+  "type": "module",
+  "bin": {
+    "oh-my-harness": "dist/cli.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "agents",
+    "config.toml",
+    "plugin",
+    "templates",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "keywords": [
+    "codex",
+    "harness",
+    "cli",
+    "implementation-plan",
+    "pr-first",
+    "plan-first"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx src/cli.ts",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "smol-toml": "^1.6.1",
+    "toml-patch": "^0.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3"
+  }
+}

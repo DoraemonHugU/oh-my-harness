@@ -1,0 +1,31 @@
+[agents.default]
+description = "Default agent.具有修改项目的权限,默认使用的model是次顶级模型,适合处理大多数任务。"
+config_file = "/home/wang/.codex/agents/default.toml"
+
+[agents.explorer]
+description = """Use `explorer` for specific codebase questions.
+Explorers are fast and authoritative.
+They must be used to ask specific, well-scoped questions on the codebase.
+The default model used is fast and has low intelligence.
+Rules:
+- In order to avoid redundant work, you should avoid exploring the same problem that explorers have already covered. Typically, you should trust the explorer results without additional verification. You are still allowed to inspect the code yourself to gain the needed context!
+- You are encouraged to spawn up multiple explorers in parallel when you have multiple distinct questions to ask about the codebase that can be answered independently. This allows you to get more information faster without waiting for one question to finish before asking the next. While waiting for the explorer results, you can continue working on other local tasks that do not depend on those results. This parallelism is a key advantage of delegation, so use it whenever you have multiple questions to ask.
+- Reuse existing explorers for related questions."""
+config_file = "/home/wang/.codex/agents/explorer.toml"
+
+[agents.reviewer]
+description = """该智能体优先推荐适用于harness工作流,在完成一个逻辑代码块、提交或一组未提交变更后，需要对照计划与编码规范进行审查时使用该智能体。它支持审查指定提交、未提交变更、自定义指令以及 worktree 差异等场景。示例:<example>用户: "我刚刚完成了用户认证模块的重构，提交是 a1b2c3d，请帮我审查一下"助手: "好的，我将调用代码审查智能体来检查这次提交引入的变更，确保没有引入缺陷且符合规范"<commentary>因为用户完成了提交并希望审查，所以使用代码审查智能体，并以该提交为目标。</commentary></example><example>用户: "我这里有一些未提交的改动，修改了订单处理逻辑，能帮我 review 一下吗？"助手: "没问题，我会用代码审查智能体检查你当前的未提交变更，看看有没有潜在问题"<commentary>用户希望审查工作区内未提交的变更，因此调用智能体并传入未提交变更目标。</commentary></example><example>用户: "请根据这些自定义说明检查代码：检查所有错误处理是否健壮，并重点关注并发安全问题"助手: "明白，我将按照你的自定义指令调用代码审查智能体来分析相关代码"<commentary>用户提供了具体的审查要求，因此需要以自定义指令模式运行智能体。</commentary></example><example>用户: "当前 feature 分支与 main 的差异已经准备好了，帮我审查即将合入的改动"助手: "我将启动代码审查智能体，基于 worktree 差异模式对比当前分支与 main 分支，找出其中的问题"<commentary>使用 worktree 差异模式可以在不切换分支的情况下对两个分支的合并差异进行审查。</commentary></example>
+"""
+config_file = "/home/wang/.codex/agents/reviewer.toml"
+
+[agents.worker]
+description = """Use for execution and production work.
+Typical tasks:
+- Implement part of a feature
+- Fix tests or bugs
+- Split large refactors into independent chunks
+Rules:
+- Explicitly assign **ownership** of the task (files / responsibility). When the subtask involves code changes, you should clearly specify which files or modules the worker is responsible for. This helps avoid merge conflicts and ensures accountability. For example, you can say "Worker 1 is responsible for updating the authentication module, while Worker 2 will handle the database layer." By defining clear ownership, you can delegate more effectively and reduce coordination overhead.
+- Always tell workers they are **not alone in the codebase**, and they should not revert the edits made by others, and they should adjust their implementation to accommodate the changes made by others. This is important because there may be multiple workers making changes in parallel, and they need to be aware of each other's work to avoid conflicts and ensure a cohesive final product."""
+config_file = "/home/wang/.codex/agents/worker.toml"
+

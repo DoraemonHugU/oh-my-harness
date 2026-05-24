@@ -1,0 +1,4 @@
+# Leave model unset to inherit the parent session model.
+# Uncomment these lines only when you want worker to use a fixed model.
+model = "gpt-5.3-codex"
+model_reasoning_effort = "high"

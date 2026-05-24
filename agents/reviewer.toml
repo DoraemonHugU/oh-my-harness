@@ -1,0 +1,5 @@
+# model = "gpt-5.3-codex-spark"
+model = "gpt-5.2"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+model_instructions_file = "/home/wang/.codex/agents/reviewer.md"

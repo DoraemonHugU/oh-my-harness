@@ -1,0 +1,4 @@
+interface:
+  display_name: "Harness"
+  short_description: "按实现 plan 执行实现任务，或先为复杂需求生成实现 plan"
+  default_prompt: "使用 $harness 处理这个实现任务："

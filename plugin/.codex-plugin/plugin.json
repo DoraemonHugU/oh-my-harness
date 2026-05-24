@@ -1,0 +1,33 @@
+{
+  "name": "oh-my-harness",
+  "version": "0.0.1",
+  "description": "中文优先的 Codex PR-first / plan-first implementation harness。",
+  "author": {
+    "name": "muggle"
+  },
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "harness",
+    "pr-first",
+    "plan-first",
+    "worktree",
+    "implementation-plan",
+    "review"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "oh-my-harness",
+    "shortDescription": "接手实现 PR、实现计划或直接需求，并收敛为可验证实现任务。",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "使用 harness 继续当前实现 PR。",
+      "使用 harness 基于实现计划执行当前任务。",
+      "使用 harness 将这个需求收敛为实现计划并实现。"
+    ]
+  }
+}
