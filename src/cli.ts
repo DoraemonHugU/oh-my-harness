@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { execFileSync } from "node:child_process";
 import { promises as fs, type Dirent } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -9,12 +10,11 @@ import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
+const PACKAGE_JSON_PATH = path.join(PACKAGE_ROOT, "package.json");
 const TEMPLATE_REPO_ROOT = path.join(PACKAGE_ROOT, "templates", "repo");
 const SKILLS_SOURCE_ROOT = path.join(PACKAGE_ROOT, "plugin", "skills");
 const CONFIG_TOML_SOURCE = path.join(PACKAGE_ROOT, "config.toml");
 const AGENTS_SOURCE_ROOT = path.join(PACKAGE_ROOT, "agents");
-const AGENTS_BEGIN = "<!-- oh-my-harness:begin -->";
-const AGENTS_END = "<!-- oh-my-harness:end -->";
 const SOURCE_CODEX_HOME_PREFIX = "__OH_MY_HARNESS_CODEX_HOME__/";
 
 type ActionKind =
@@ -30,12 +30,15 @@ type SummaryEntry = {
   detail?: string;
 };
 
+type Locale = "zh" | "en";
+
 type InitOptions = {
   force: boolean;
   global: boolean;
   dryRun: boolean;
   targetRoot: string;
   projectName: string;
+  locale: Locale;
 };
 
 type ParsedArgs = {
@@ -45,10 +48,265 @@ type ParsedArgs = {
   global: boolean;
   dryRun: boolean;
   help: boolean;
+  version: boolean;
+  lang: Locale | null;
 };
 
-function printUsage(): void {
-  console.log("Usage: npx oh-my-harness init [projectName] [--force] [--global] [--dry-run]");
+const TEXT = {
+  zh: {
+    usage: "用法：",
+    commands: "命令：",
+    options: "参数：",
+    initDesc: "初始化当前目录或指定项目目录",
+    helpDesc: "显示帮助",
+    helpFlag: "显示帮助",
+    versionFlag: "显示版本",
+    forceFlag: "覆盖同名模板、skill 和全局 agent/config 条目",
+    globalFlag: "将 skills 安装到用户目录下的 .agents/skills/",
+    dryRunFlag: "只预演，不落盘",
+    langFlag: "输出语言：zh | en",
+    unknownArg: "未知参数",
+    missingLang: "缺少语言参数",
+    unknownCommand: "未知命令",
+    targetNotDirectory: "目标路径不是目录",
+    initTarget: "目标目录:",
+    mode: "模式:",
+    modeDryRun: "预演",
+    modeApply: "应用",
+    skillsTarget: "skills 目录:",
+    globalConfig: "全局配置:",
+    created: "创建",
+    updated: "更新",
+    replaced: "覆盖",
+    patched: "补丁",
+    skipped: "跳过",
+    createTargetDir: "创建目标项目目录",
+    writeAgentsTemplate: "写入 AGENTS.md 模板",
+    replaceAgentsBackup: "覆盖现有 AGENTS.md 备份文件",
+    createAgentsBackup: "备份现有 AGENTS.md 到 agents.back.md",
+    agentsAlreadyLatest: "AGENTS.md 已是最新模板",
+    replaceAgentsTemplate: "直接覆盖 AGENTS.md 模板",
+    targetFileExistsNoForce: "目标文件已存在，未使用 --force",
+    replaceTemplateFile: "按文件覆盖模板",
+    createTemplateFile: "写入模板文件",
+    skillDirExistsNoForce: "skill 目录已存在，未使用 --force",
+    installGlobalSkill: "安装全局 skill",
+    installProjectSkill: "安装项目级 skill",
+    globalConfigAgentExistsNoForce: "全局 config 已存在 agents.%s，未使用 --force",
+    updateGlobalConfigAgent: "更新全局 config 的 agents.%s",
+    createGlobalConfigAgent: "新增全局 config 的 agents.%s",
+    initGlobalCodexConfig: "初始化全局 codex config",
+    noGlobalConfigChange: "无全局 config 变更",
+    agentMarkdownExistsNoForce: "agent markdown 已存在，未使用 --force",
+    replaceAgentMarkdown: "覆盖 agent markdown",
+    createAgentMarkdown: "写入 agent markdown",
+    agentTomlExistsNoForce: "agent TOML 已存在，未使用 --force",
+    patchAgentToml: "patch 覆盖 agent TOML",
+    createAgentToml: "写入 agent TOML",
+    migrationPromptLabel: "后续提示:",
+    migrationPrompt:
+      "请对比 `AGENTS.md` 与 `agents.back.md`，只迁移仍有价值的项目级规则到新的 `AGENTS.md`，然后清理 `agents.back.md`。",
+  },
+  en: {
+    usage: "Usage:",
+    commands: "Commands:",
+    options: "Options:",
+    initDesc: "Initialize the current directory or a target project directory",
+    helpDesc: "Show help",
+    helpFlag: "Show help",
+    versionFlag: "Show version",
+    forceFlag: "Overwrite same-name templates, skills, and global agent/config entries",
+    globalFlag: "Install skills into the user's .agents/skills/ directory",
+    dryRunFlag: "Preview only; do not write files",
+    langFlag: "Output language: zh | en",
+    unknownArg: "Unknown argument",
+    missingLang: "Missing language argument",
+    unknownCommand: "Unknown command",
+    targetNotDirectory: "Target path is not a directory",
+    initTarget: "init target:",
+    mode: "mode:",
+    modeDryRun: "dry-run",
+    modeApply: "apply",
+    skillsTarget: "skills target:",
+    globalConfig: "global config:",
+    created: "created",
+    updated: "updated",
+    replaced: "replaced",
+    patched: "patched",
+    skipped: "skipped",
+    createTargetDir: "create target project directory",
+    writeAgentsTemplate: "write AGENTS.md template",
+    replaceAgentsBackup: "replace existing AGENTS.md backup file",
+    createAgentsBackup: "backup existing AGENTS.md to agents.back.md",
+    agentsAlreadyLatest: "AGENTS.md is already up to date",
+    replaceAgentsTemplate: "replace AGENTS.md directly",
+    targetFileExistsNoForce: "target file already exists; --force not set",
+    replaceTemplateFile: "replace template file",
+    createTemplateFile: "write template file",
+    skillDirExistsNoForce: "skill directory already exists; --force not set",
+    installGlobalSkill: "install global skill",
+    installProjectSkill: "install project skill",
+    globalConfigAgentExistsNoForce: "global config already has agents.%s; --force not set",
+    updateGlobalConfigAgent: "update global config agents.%s",
+    createGlobalConfigAgent: "create global config agents.%s",
+    initGlobalCodexConfig: "initialize global codex config",
+    noGlobalConfigChange: "no global config changes",
+    agentMarkdownExistsNoForce: "agent markdown already exists; --force not set",
+    replaceAgentMarkdown: "replace agent markdown",
+    createAgentMarkdown: "write agent markdown",
+    agentTomlExistsNoForce: "agent TOML already exists; --force not set",
+    patchAgentToml: "patch agent TOML",
+    createAgentToml: "write agent TOML",
+    migrationPromptLabel: "next step:",
+    migrationPrompt:
+      "Compare `AGENTS.md` with `agents.back.md`, migrate only still-useful project-level rules into the new `AGENTS.md`, then remove `agents.back.md`.",
+  },
+} as const;
+
+function formatText(locale: Locale, key: keyof typeof TEXT.zh, ...args: string[]): string {
+  let value: string = TEXT[locale][key];
+  for (const arg of args) {
+    value = value.replace("%s", arg);
+  }
+  return value;
+}
+
+function terminalSupportsUtf8(): boolean {
+  const localeHints = [
+    process.env.LC_ALL,
+    process.env.LC_CTYPE,
+    process.env.LANG,
+    process.env.TERM,
+    process.env.WT_SESSION ? "WT_SESSION" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (/utf-?8/i.test(localeHints)) {
+    return true;
+  }
+
+  if (localeHints.trim()) {
+    return false;
+  }
+
+  return true;
+}
+
+function detectWindowsCodePage(): string | null {
+  if (process.platform !== "win32") {
+    return null;
+  }
+
+  try {
+    const output = execFileSync("cmd.exe", ["/d", "/s", "/c", "chcp"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      windowsHide: true,
+    });
+    const match = output.match(/(\d{3,5})/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+function prefersChineseOutput(): boolean {
+  const localeHints = [
+    process.env.LC_ALL,
+    process.env.LC_CTYPE,
+    process.env.LANG,
+    Intl.DateTimeFormat().resolvedOptions().locale,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (/\bzh\b|zh[-_](CN|SG|Hans)/i.test(localeHints)) {
+    return true;
+  }
+
+  const windowsCodePage = detectWindowsCodePage();
+  if (windowsCodePage && ["936", "20936", "54936", "65001"].includes(windowsCodePage)) {
+    return true;
+  }
+
+  return false;
+}
+
+function resolveLocale(parsedLang: Locale | null): Locale {
+  if (parsedLang) {
+    return parsedLang;
+  }
+
+  if (terminalSupportsUtf8()) {
+    return "zh";
+  }
+
+  return prefersChineseOutput() ? "zh" : "en";
+}
+
+function printUsage(locale: Locale): void {
+  console.log(formatText(locale, "usage"));
+  console.log("  npx @doraemon-hug-u/oh-my-harness <command> [options]");
+  console.log("  oh-my-harness <command> [options]");
+  console.log("");
+  console.log(formatText(locale, "commands"));
+  console.log(`  init [projectName]       ${formatText(locale, "initDesc")}`);
+  console.log(`  help                     ${formatText(locale, "helpDesc")}`);
+  console.log("");
+  console.log(formatText(locale, "options"));
+  console.log(`  -h, --help               ${formatText(locale, "helpFlag")}`);
+  console.log(`  -v, --version            ${formatText(locale, "versionFlag")}`);
+  console.log(`  -f, --force              ${formatText(locale, "forceFlag")}`);
+  console.log(`  -g, --global             ${formatText(locale, "globalFlag")}`);
+  console.log(`      --dry-run            ${formatText(locale, "dryRunFlag")}`);
+  console.log(`      --lang <zh|en>       ${formatText(locale, "langFlag")}`);
+}
+
+async function printVersion(): Promise<void> {
+  const packageJson = JSON.parse(await fs.readFile(PACKAGE_JSON_PATH, "utf8")) as { version?: string };
+  console.log(packageJson.version ?? "unknown");
+}
+
+const ANSI = {
+  reset: "\u001b[0m",
+  bold: "\u001b[1m",
+  dim: "\u001b[2m",
+  green: "\u001b[32m",
+  yellow: "\u001b[33m",
+  blue: "\u001b[34m",
+  magenta: "\u001b[35m",
+  cyan: "\u001b[36m",
+  gray: "\u001b[90m",
+};
+
+function useColor(): boolean {
+  if (!process.stdout.isTTY || process.env.NO_COLOR) {
+    return false;
+  }
+
+  if (process.env.FORCE_COLOR) {
+    return true;
+  }
+
+  if (process.platform !== "win32") {
+    return true;
+  }
+
+  return Boolean(
+    process.env.WT_SESSION
+    || process.env.ANSICON
+    || process.env.ConEmuANSI === "ON"
+    || process.env.TERM_PROGRAM
+    || /xterm|ansi|color|cygwin|msys/i.test(process.env.TERM ?? ""),
+  );
+}
+
+function color(text: string, tone: keyof typeof ANSI): string {
+  if (!useColor()) {
+    return text;
+  }
+  return `${ANSI[tone]}${text}${ANSI.reset}`;
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
@@ -58,10 +316,19 @@ function parseArgs(argv: string[]): ParsedArgs {
   let global = false;
   let dryRun = false;
   let help = false;
+  let version = false;
+  let lang: Locale | null = null;
+  const defaultLocale = resolveLocale(null);
 
-  for (const arg of argv) {
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index]!;
     if (arg === "--help" || arg === "-h" || arg === "help") {
       help = true;
+      continue;
+    }
+
+    if (arg === "--version" || arg === "-v" || arg === "version") {
+      version = true;
       continue;
     }
 
@@ -85,15 +352,28 @@ function parseArgs(argv: string[]): ParsedArgs {
       continue;
     }
 
+    if (arg === "--lang") {
+      const value = argv[index + 1];
+      if (!value) {
+        throw new Error(formatText(lang ?? defaultLocale, "missingLang"));
+      }
+      if (value !== "zh" && value !== "en") {
+        throw new Error(`${formatText(lang ?? defaultLocale, "unknownArg")}: ${value}`);
+      }
+      lang = value;
+      index += 1;
+      continue;
+    }
+
     if (!projectArg && !arg.startsWith("-")) {
       projectArg = arg;
       continue;
     }
 
-    throw new Error(`Unknown argument: ${arg}`);
+    throw new Error(`${formatText(lang ?? defaultLocale, "unknownArg")}: ${arg}`);
   }
 
-  return { command, projectArg, force, global, dryRun, help };
+  return { command, projectArg, force, global, dryRun, help, version, lang };
 }
 
 function resolveInitOptions(parsed: ParsedArgs): InitOptions {
@@ -109,6 +389,7 @@ function resolveInitOptions(parsed: ParsedArgs): InitOptions {
     dryRun: parsed.dryRun,
     targetRoot,
     projectName,
+    locale: resolveLocale(parsed.lang),
   };
 }
 
@@ -135,65 +416,54 @@ async function ensureTargetRoot(options: InitOptions, summary: SummaryEntry[]): 
     if (!dryRun) {
       await fs.mkdir(targetRoot, { recursive: true });
     }
-    summary.push({ kind: "created", target: targetRoot, detail: "创建目标项目目录" });
+    summary.push({ kind: "created", target: targetRoot, detail: formatText(options.locale, "createTargetDir") });
     return;
   }
 
   const stats = await fs.stat(targetRoot);
   if (!stats.isDirectory()) {
-    throw new Error(`Target path is not a directory: ${targetRoot}`);
+    throw new Error(`${formatText(options.locale, "targetNotDirectory")}: ${targetRoot}`);
   }
-}
-
-function extractAgentsBlock(content: string): string {
-  const escapedBegin = AGENTS_BEGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const escapedEnd = AGENTS_END.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const blockPattern = new RegExp(`${escapedBegin}[\\s\\S]*?${escapedEnd}\\n?`, "m");
-  const matched = content.match(blockPattern);
-  if (!matched) {
-    throw new Error("templates/repo/AGENTS.md 缺少 oh-my-harness marker block");
-  }
-  return matched[0].endsWith("\n") ? matched[0] : `${matched[0]}\n`;
 }
 
 async function patchAgentsFile(options: InitOptions, summary: SummaryEntry[]): Promise<void> {
   const { targetRoot, dryRun } = options;
   const sourcePath = path.join(TEMPLATE_REPO_ROOT, "AGENTS.md");
   const targetPath = path.join(targetRoot, "AGENTS.md");
+  const backupPath = path.join(targetRoot, "agents.back.md");
   const sourceContent = await fs.readFile(sourcePath, "utf8");
-  const block = extractAgentsBlock(sourceContent);
+  const templateContent = sourceContent.endsWith("\n") ? sourceContent : `${sourceContent}\n`;
 
   if (!(await pathExists(targetPath))) {
     if (!dryRun) {
-      await fs.writeFile(targetPath, block, "utf8");
+      await fs.writeFile(targetPath, templateContent, "utf8");
     }
-    summary.push({ kind: "created", target: targetPath, detail: "新增 oh-my-harness AGENTS block" });
+    summary.push({ kind: "created", target: targetPath, detail: formatText(options.locale, "writeAgentsTemplate") });
     return;
   }
 
   const existing = await fs.readFile(targetPath, "utf8");
-  const escapedBegin = AGENTS_BEGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const escapedEnd = AGENTS_END.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const blockPattern = new RegExp(`${escapedBegin}[\\s\\S]*?${escapedEnd}\\n?`, "m");
+  const backupExists = await pathExists(backupPath);
+  if (!dryRun) {
+    await fs.writeFile(backupPath, existing, "utf8");
+  }
+  summary.push({
+    kind: backupExists ? "replaced" : "created",
+    target: backupPath,
+    detail: backupExists
+      ? formatText(options.locale, "replaceAgentsBackup")
+      : formatText(options.locale, "createAgentsBackup"),
+  });
 
-  if (blockPattern.test(existing)) {
-    const next = existing.replace(blockPattern, block);
-    if (next !== existing) {
-      if (!dryRun) {
-        await fs.writeFile(targetPath, next, "utf8");
-      }
-      summary.push({ kind: "updated", target: targetPath, detail: "替换现有 oh-my-harness AGENTS block" });
-    } else {
-      summary.push({ kind: "skipped", target: targetPath, detail: "AGENTS block 已是最新" });
-    }
+  if (existing === templateContent) {
+    summary.push({ kind: "skipped", target: targetPath, detail: formatText(options.locale, "agentsAlreadyLatest") });
     return;
   }
 
-  const separator = existing.endsWith("\n") ? "\n" : "\n\n";
   if (!dryRun) {
-    await fs.writeFile(targetPath, `${existing}${separator}${block}`, "utf8");
+    await fs.writeFile(targetPath, templateContent, "utf8");
   }
-  summary.push({ kind: "updated", target: targetPath, detail: "追加 oh-my-harness AGENTS block" });
+  summary.push({ kind: "replaced", target: targetPath, detail: formatText(options.locale, "replaceAgentsTemplate") });
 }
 
 async function listTemplateFiles(): Promise<string[]> {
@@ -233,7 +503,7 @@ async function installProjectTemplates(
     const exists = await pathExists(targetPath);
 
     if (exists && !options.force) {
-      summary.push({ kind: "skipped", target: targetPath, detail: "目标文件已存在，未使用 --force" });
+      summary.push({ kind: "skipped", target: targetPath, detail: formatText(options.locale, "targetFileExistsNoForce") });
       continue;
     }
 
@@ -244,7 +514,7 @@ async function installProjectTemplates(
     summary.push({
       kind: exists ? "replaced" : "created",
       target: targetPath,
-      detail: exists ? "按文件覆盖模板" : "写入模板文件",
+      detail: exists ? formatText(options.locale, "replaceTemplateFile") : formatText(options.locale, "createTemplateFile"),
     });
   }
 
@@ -274,7 +544,7 @@ async function installSkills(
     const exists = await pathExists(targetDir);
 
     if (exists && !options.force) {
-      summary.push({ kind: "skipped", target: targetDir, detail: "skill 目录已存在，未使用 --force" });
+      summary.push({ kind: "skipped", target: targetDir, detail: formatText(options.locale, "skillDirExistsNoForce") });
       continue;
     }
 
@@ -291,7 +561,9 @@ async function installSkills(
     summary.push({
       kind: exists ? "replaced" : "created",
       target: targetDir,
-      detail: options.global ? "安装全局 skill" : "安装项目级 skill",
+      detail: options.global
+        ? formatText(options.locale, "installGlobalSkill")
+        : formatText(options.locale, "installProjectSkill"),
     });
   }
 }
@@ -306,7 +578,7 @@ function deepRewriteCodexPaths<T>(value: T, targetCodexHome: string): T {
       .slice(SOURCE_CODEX_HOME_PREFIX.length)
       .split("/")
       .filter(Boolean);
-    return path.resolve(targetCodexHome, ...relativeParts) as T;
+    return path.resolve(targetCodexHome, ...relativeParts).replaceAll(path.sep, "/") as T;
   }
 
   if (Array.isArray(value)) {
@@ -361,6 +633,7 @@ function upsertAgentSections(
   existing: Record<string, unknown>,
   template: Record<string, unknown>,
   force: boolean,
+  locale: Locale,
   summary: SummaryEntry[],
   targetConfigPath: string,
 ): Record<string, unknown> {
@@ -377,7 +650,7 @@ function upsertAgentSections(
       summary.push({
         kind: "skipped",
         target: targetConfigPath,
-        detail: `全局 config 已存在 agents.${agentName}，未使用 --force`,
+        detail: formatText(locale, "globalConfigAgentExistsNoForce", agentName),
       });
       continue;
     }
@@ -387,7 +660,9 @@ function upsertAgentSections(
     summary.push({
       kind: hasExisting ? "patched" : "created",
       target: targetConfigPath,
-      detail: hasExisting ? `更新全局 config 的 agents.${agentName}` : `新增全局 config 的 agents.${agentName}`,
+      detail: hasExisting
+        ? formatText(locale, "updateGlobalConfigAgent", agentName)
+        : formatText(locale, "createGlobalConfigAgent", agentName),
     });
   }
 
@@ -425,6 +700,7 @@ async function patchCodexConfig(
     existingParsed,
     parsedTemplate,
     options.force,
+    options.locale,
     summary,
     configPath,
   );
@@ -436,9 +712,9 @@ async function patchCodexConfig(
         if (!options.dryRun) {
           await fs.writeFile(configPath, `${written}\n`, "utf8");
         }
-        summary.push({ kind: "created", target: configPath, detail: "初始化全局 codex config" });
+        summary.push({ kind: "created", target: configPath, detail: formatText(options.locale, "initGlobalCodexConfig") });
       } else {
-        summary.push({ kind: "skipped", target: configPath, detail: "无全局 config 变更" });
+        summary.push({ kind: "skipped", target: configPath, detail: formatText(options.locale, "noGlobalConfigChange") });
       }
     }
   } else {
@@ -471,7 +747,7 @@ async function installAgentFiles(
 
     if (entry.name.endsWith(".md")) {
       if (exists && !options.force) {
-        summary.push({ kind: "skipped", target: targetPath, detail: "agent markdown 已存在，未使用 --force" });
+        summary.push({ kind: "skipped", target: targetPath, detail: formatText(options.locale, "agentMarkdownExistsNoForce") });
         continue;
       }
 
@@ -482,7 +758,7 @@ async function installAgentFiles(
       summary.push({
         kind: exists ? "replaced" : "created",
         target: targetPath,
-        detail: exists ? "覆盖 agent markdown" : "写入 agent markdown",
+        detail: exists ? formatText(options.locale, "replaceAgentMarkdown") : formatText(options.locale, "createAgentMarkdown"),
       });
       continue;
     }
@@ -494,7 +770,7 @@ async function installAgentFiles(
     );
 
     if (exists && !options.force) {
-      summary.push({ kind: "skipped", target: targetPath, detail: "agent TOML 已存在，未使用 --force" });
+      summary.push({ kind: "skipped", target: targetPath, detail: formatText(options.locale, "agentTomlExistsNoForce") });
       continue;
     }
 
@@ -508,11 +784,11 @@ async function installAgentFiles(
       const mergedObject = deepMergeObjects(existingObject, templateObject as Record<string, unknown>);
       nextText = stringifyTomlDocument(mergedObject);
       actionKind = "patched";
-      detail = "patch 覆盖 agent TOML";
+      detail = formatText(options.locale, "patchAgentToml");
     } else {
       nextText = stringifyTomlDocument(templateObject as Record<string, unknown>);
       actionKind = "created";
-      detail = "写入 agent TOML";
+      detail = formatText(options.locale, "createAgentToml");
     }
 
     if (!options.dryRun) {
@@ -523,6 +799,7 @@ async function installAgentFiles(
 }
 
 function printSummary(options: InitOptions, summary: SummaryEntry[]): void {
+  const { locale } = options;
   const orderedKinds: ActionKind[] = [
     "created",
     "updated",
@@ -539,10 +816,18 @@ function printSummary(options: InitOptions, summary: SummaryEntry[]): void {
     groups.get(entry.kind)!.push(entry);
   }
 
-  console.log(`init target: ${options.targetRoot}`);
-  console.log(`mode: ${options.dryRun ? "dry-run" : "apply"}`);
-  console.log(`skills target: ${options.global ? path.join(os.homedir(), ".agents", "skills") : path.join(options.targetRoot, ".agents", "skills")}`);
-  console.log(`global config: ${path.join(os.homedir(), ".codex", "config.toml")}`);
+  console.log(`${color(formatText(locale, "initTarget"), "cyan")} ${options.targetRoot}`);
+  console.log(
+    `${color(formatText(locale, "mode"), "cyan")} ${
+      options.dryRun ? color(formatText(locale, "modeDryRun"), "yellow") : color(formatText(locale, "modeApply"), "green")
+    }`,
+  );
+  console.log(
+    `${color(formatText(locale, "skillsTarget"), "cyan")} ${
+      options.global ? path.join(os.homedir(), ".agents", "skills") : path.join(options.targetRoot, ".agents", "skills")
+    }`,
+  );
+  console.log(`${color(formatText(locale, "globalConfig"), "cyan")} ${path.join(os.homedir(), ".codex", "config.toml")}`);
 
   for (const kind of orderedKinds) {
     const entries = groups.get(kind)!;
@@ -550,10 +835,26 @@ function printSummary(options: InitOptions, summary: SummaryEntry[]): void {
       continue;
     }
 
-    console.log(`\n${kind}:`);
+    const title =
+      kind === "created" ? color(formatText(locale, "created"), "green")
+      : kind === "updated" ? color(formatText(locale, "updated"), "blue")
+      : kind === "replaced" ? color(formatText(locale, "replaced"), "magenta")
+      : kind === "patched" ? color(formatText(locale, "patched"), "yellow")
+      : color(formatText(locale, "skipped"), "gray");
+    const boldStart = useColor() ? ANSI.bold : "";
+    const boldEnd = useColor() ? ANSI.reset : "";
+    console.log(`\n${boldStart}${title}:${boldEnd}`);
     for (const entry of entries) {
-      console.log(`- ${entry.target}${entry.detail ? ` (${entry.detail})` : ""}`);
+      const detail = entry.detail ? ` ${color(`(${entry.detail})`, "dim")}` : "";
+      console.log(`- ${entry.target}${detail}`);
     }
+  }
+
+  const hasAgentsBackup = summary.some((entry) => entry.target.endsWith(`${path.sep}agents.back.md`));
+  if (hasAgentsBackup) {
+    console.log(
+      `\n${color(formatText(locale, "migrationPromptLabel"), "cyan")} ${color(formatText(locale, "migrationPrompt"), "yellow")}`,
+    );
   }
 }
 
@@ -569,13 +870,19 @@ async function runInit(options: InitOptions): Promise<void> {
 
 async function main(): Promise<void> {
   const parsed = parseArgs(process.argv.slice(2));
+  const locale = resolveLocale(parsed.lang);
+  if (parsed.version) {
+    await printVersion();
+    return;
+  }
+
   if (parsed.help || !parsed.command) {
-    printUsage();
+    printUsage(locale);
     return;
   }
 
   if (parsed.command !== "init") {
-    throw new Error(`Unknown command: ${parsed.command}`);
+    throw new Error(`${formatText(locale, "unknownCommand")}: ${parsed.command}`);
   }
 
   const options = resolveInitOptions(parsed);

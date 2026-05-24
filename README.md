@@ -27,6 +27,12 @@ npm install -g @doraemon-hug-u/oh-my-harness
 oh-my-harness init
 ```
 
+也可以直接运行：
+
+```bash
+npx @doraemon-hug-u/oh-my-harness init
+```
+
 ## 快速开始
 
 在当前项目目录初始化：
@@ -59,11 +65,19 @@ oh-my-harness init my-project --force
 oh-my-harness init my-project --global
 ```
 
+指定输出语言：
+
+```bash
+oh-my-harness init my-project --lang zh
+oh-my-harness init my-project --lang en
+```
+
 ## `init` 会写入什么
 
 项目级：
 
 - `<target>/AGENTS.md`
+- `<target>/agents.back.md`（仅目标已存在 `AGENTS.md` 时）
 - `<target>/.github/**`
 - `<target>/docs/specs/**`
 - `<target>/.agents/skills/**`
@@ -82,6 +96,13 @@ oh-my-harness init my-project --global
 | `--dry-run` | 只读取和计算变更，不落盘 |
 | `--force` | 覆盖同名模板文件和 skill 目录，并 patch 已有全局配置 |
 | `--global` | 将 skills 安装到 `~/.agents/skills/` |
+| `--lang <zh\|en>` | 强制指定 CLI 输出语言 |
+
+## `AGENTS.md` 覆盖行为
+
+- 如果目标项目不存在 `AGENTS.md`，直接写入模板。
+- 如果目标项目已存在 `AGENTS.md`，先备份为 `agents.back.md`，再覆盖为新模板。
+- CLI 会额外提示一条精简后续操作：对比 `AGENTS.md` 与 `agents.back.md`，只迁移仍有价值的项目级规则，再清理备份文件。
 
 ## 当前设计
 
