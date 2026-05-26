@@ -10,9 +10,13 @@
 
 `oh-my-harness` 是一个用于初始化和运行 Codex `PR-first / plan-first` 工作流的轻量 harness：它提供 CLI、仓库模板、skills 和可选的全局配置 patch，把 research、plan、PR 准备和 review 尽量放到更低成本的环境里，再把必要的本地代码编写、验证和交付留给 Codex。
 
-**把便宜的额度花在 research、plan 和 review 上，把贵的 Codex 配额留给真正的实现。**
+## 优先支持 Codex , CC和OC支持正在路上
 
-**哪里便宜，哪里研究；哪里顺手，哪里写 plan；只在 Codex 本地做必要的代码修改。**
+## 从现在开始,合理利用你的订阅
+
+**把不能编码的额度花在 research、plan 和 review 上**
+
+**把 Codex 编码额度留给真正的代码修改。**
 
 **别把 Codex 浪费在重复读代码和审查上，把本地额度主要用于实现、验证和交付。**
 
