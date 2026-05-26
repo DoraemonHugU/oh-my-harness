@@ -62,9 +62,9 @@ Telegraph style. Root rules only. Read scoped AGENTS.md before subtree work. Ski
 ## 工作流
 
 - 实现任务优先加载 `$harness` skill。
-- 通过 GitHub connector / 云端项目接入的 agent，不直接实现业务代码。
-- 这类 agent 只负责研究、边界收敛、PR 更新和 plan 交付。
 - 相关规则：`@docs/specs/agent-workflow.md`
+- `.oh-my-harness/tree.md` 会由项目 hook 自动刷新，不需要手工维护。
+- 如果当前提交让 `.oh-my-harness/tree.md` 发生变化，需要与当前改动一起提交。
 
 
 ## Review guidelines
