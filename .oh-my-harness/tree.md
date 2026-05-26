@@ -1,0 +1,100 @@
+# Tree
+
+Use this file for navigation only. Verify implementation details by reading source files directly.
+
+- Source: `git ls-files --cached --others --exclude-standard`
+- Entries: 65
+
+```text
+./
+├── .codex/
+│   ├── hooks/
+│   │   └── tree.mjs
+│   └── hooks.json
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── agents/
+│   ├── default.toml
+│   ├── explorer.toml
+│   ├── reviewer.md
+│   ├── reviewer.toml
+│   └── worker.toml
+├── plugin/
+│   ├── .codex-plugin/
+│   │   └── plugin.json
+│   └── skills/
+│       ├── harness/
+│       │   ├── agents/
+│       │   │   └── openai.yaml
+│       │   ├── refs/
+│       │   │   ├── local-review.md
+│       │   │   ├── visual-display.md
+│       │   │   └── writing-plan.md
+│       │   └── SKILL.md
+│       ├── receiving-code-review/
+│       │   └── SKILL.md
+│       ├── systematic-debugging/
+│       │   ├── condition-based-waiting-example.ts
+│       │   ├── condition-based-waiting.md
+│       │   ├── CREATION-LOG.md
+│       │   ├── defense-in-depth.md
+│       │   ├── find-polluter.sh
+│       │   ├── LICENSE.upstream
+│       │   ├── root-cause-tracing.md
+│       │   ├── SKILL.md
+│       │   ├── test-academic.md
+│       │   ├── test-pressure-1.md
+│       │   ├── test-pressure-2.md
+│       │   └── test-pressure-3.md
+│       └── tdd/
+│           ├── LICENSE.upstream
+│           ├── mocking.md
+│           ├── SKILL.md
+│           └── tests.md
+├── src/
+│   ├── core/
+│   │   ├── args.test.ts
+│   │   ├── args.ts
+│   │   ├── init.ts
+│   │   ├── runtime.test.ts
+│   │   ├── runtime.ts
+│   │   ├── summary.ts
+│   │   ├── terminal.ts
+│   │   ├── text.ts
+│   │   └── types.ts
+│   ├── ui/
+│   │   ├── init-wizard-state.test.ts
+│   │   ├── init-wizard-state.ts
+│   │   ├── init-wizard.tsx
+│   │   ├── preview.test.ts
+│   │   └── preview.ts
+│   └── cli.ts
+├── templates/
+│   └── repo/
+│       ├── .codex/
+│       │   ├── hooks/
+│       │   │   └── tree.mjs
+│       │   └── hooks.json
+│       ├── .github/
+│       │   ├── PULL_REQUEST_TEMPLATE/
+│       │   │   ├── implementation.md
+│       │   │   └── research.md
+│       │   ├── codex-review-comment.md
+│       │   └── writing-plan.md
+│       ├── docs/
+│       │   └── specs/
+│       │       ├── agent-workflow.md
+│       │       ├── architect-design.md
+│       │       └── review-guidelines.md
+│       ├── .gitignore
+│       └── AGENTS.md
+├── .gitignore
+├── config.toml
+├── LICENSE
+├── package-lock.json
+├── package.json
+├── README.md
+├── THIRD_PARTY_NOTICES.md
+└── tsconfig.json
+```

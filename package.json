@@ -1,6 +1,6 @@
 {
   "name": "@doraemon-hug-u/oh-my-harness",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Chinese-first Codex PR-first / plan-first implementation harness.",
   "license": "MIT",
   "author": "doraemon-hug-u",
@@ -45,13 +45,18 @@
     "check": "tsc -p tsconfig.json --noEmit",
     "dev": "tsx src/cli.ts",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run check"
+    "prepublishOnly": "npm run check",
+    "test": "node --import tsx --test src/**/*.test.ts"
   },
   "dependencies": {
+    "@inkjs/ui": "^2.0.0",
+    "ink": "^5.2.1",
+    "react": "^18.3.1",
     "smol-toml": "^1.6.1"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "@types/react": "^18.3.29",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3"
   }

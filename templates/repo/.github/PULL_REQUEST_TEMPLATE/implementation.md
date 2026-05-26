@@ -9,6 +9,7 @@ oh-my-harness: implementation-pr-template
 
 边界：
 - 本 PR 应是一个原子任务。
+- Implementation PR 默认使用普通 PR（非 draft）。
 - 不把无关修复、研究备忘或长期讨论塞进本 PR。
 - 来源可以是用户需求、Issue、Research PR、外部模型分析或已有计划。
 -->

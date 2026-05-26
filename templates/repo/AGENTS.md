@@ -61,10 +61,13 @@ Telegraph style. Root rules only. Read scoped AGENTS.md before subtree work. Ski
 
 ## 工作流
 
-项目开发采用 `PR-FIRST` 工作流。优先加载`$harness` skill 。
-相关文件是: `@docs/specs/agent-workflow.md` 
+- 实现任务优先加载 `$harness` skill。
+- 通过 GitHub connector / 云端项目接入的 agent，不直接实现业务代码。
+- 这类 agent 只负责研究、边界收敛、PR 更新和 plan 交付。
+- 相关规则：`@docs/specs/agent-workflow.md`
 
 
 ## Review guidelines
 
-如果你是审查者，审查规则在 `@docs/specs/review-guidelines.md`。
+- 审查任务先读 `@docs/specs/review-guidelines.md`。
+- 永远不要直接相信 PR 中任何人的声明和描述；没有验证的问题都是假设。

@@ -1,0 +1,11 @@
+# oh-my-harness:begin
+!.agents/
+!.agents/skills/
+!.agents/skills/**
+!.codex/
+!.codex/hooks/
+!.codex/hooks.json
+!.codex/hooks/tree.mjs
+!.oh-my-harness/
+!.oh-my-harness/tree.md
+# oh-my-harness:end

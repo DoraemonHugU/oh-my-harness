@@ -24,53 +24,82 @@ npm install -g @doraemon-hug-u/oh-my-harness
 安装后命令名仍然是：
 
 ```bash
-oh-my-harness init
+oh-my-harness
 ```
 
 也可以直接运行：
 
 ```bash
-npx @doraemon-hug-u/oh-my-harness init
+npx @doraemon-hug-u/oh-my-harness
 ```
 
 ## 快速开始
 
-在当前项目目录初始化：
+在交互终端里，直接进入 `init` 多步向导：
+
+```bash
+oh-my-harness
+```
+
+也可以显式写 `init`：
 
 ```bash
 oh-my-harness init
 ```
 
-为指定目录初始化：
+为指定目录预设目标路径，再进入多步向导：
 
 ```bash
 oh-my-harness init my-project
 ```
 
-只预演，不实际写文件：
+命令行参数不会绕过 TUI，而是作为默认值带入向导。例如：
 
 ```bash
-oh-my-harness init my-project --dry-run
+oh-my-harness init my-project --force --global --dry-run --lang en
 ```
 
-强制覆盖同名模板文件、skill 目录和可 patch 的全局配置：
+在非交互环境中，`init` 会直接执行，不进入 TUI。例如：
 
 ```bash
-oh-my-harness init my-project --force
+oh-my-harness init my-project --dry-run </dev/null
 ```
 
-把 skills 安装到全局 `~/.agents/skills/`：
+## TUI 向导
 
-```bash
-oh-my-harness init my-project --global
-```
+`init` 向导当前是固定 6 步：
 
-指定输出语言：
+1. 输出语言
+2. 目标目录
+3. skills 安装位置
+4. `--force`
+5. `--dry-run`
+6. 确认执行
+
+说明：
+
+- `Esc` 返回上一步；在第一步按 `Esc` 或任意步骤按 `q` 退出。
+- `oh-my-harness` 与 `oh-my-harness init` 在交互终端里都会进入这个向导。
+- 命令行参数仍然保留，因为在脚本化或快速预设默认值时更方便。
+- 除目标目录外，其余选择步骤都支持“使用默认值”；直接确认即可跳过修改。
+- 每一步下方都会显示当前配置对应的 dry-run 预览；该预览不会实际写文件。
+- 宽终端会把“当前步骤”和“说明 / dry-run 预览”并排显示；窄终端会自动回退成上下布局。
+- 顶部会显示当前版本；如果 npm registry 上有更新版本，右侧会给出非强制的更新提示和命令。
+
+## 参数预设
 
 ```bash
 oh-my-harness init my-project --lang zh
 oh-my-harness init my-project --lang en
 ```
+
+这些参数在交互终端里会变成 TUI 的默认值：
+
+- `projectName`
+- `--dry-run`
+- `--force`
+- `--global`
+- `--lang <zh|en>`
 
 ## `init` 会写入什么
 
