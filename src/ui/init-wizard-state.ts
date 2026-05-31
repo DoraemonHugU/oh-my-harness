@@ -1,6 +1,7 @@
 export type WizardStep =
   | "locale"
   | "target"
+  | "cli"
   | "scope"
   | "force"
   | "dryRun"
@@ -11,6 +12,7 @@ export type WizardStep =
 const STEP_ORDER: WizardStep[] = [
   "locale",
   "target",
+  "cli",
   "scope",
   "force",
   "dryRun",

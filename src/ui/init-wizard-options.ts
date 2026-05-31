@@ -19,6 +19,7 @@ type BaseOption = {
 export function isChoiceScreen(step: WizardStep): boolean {
   return (
     step === "locale"
+    || step === "cli"
     || step === "scope"
     || step === "force"
     || step === "dryRun"
@@ -50,6 +51,31 @@ export function buildStepOptions(
       {
         label: formatText(options.locale, "tuiScopeGlobal"),
         value: "global",
+      },
+      {
+        label: formatText(options.locale, "tuiBack"),
+        value: BACK_OPTION_VALUE,
+      },
+    ];
+  }
+
+  if (step === "cli") {
+    return [
+      {
+        label: formatText(options.locale, "tuiCliCodex"),
+        value: "codex",
+      },
+      {
+        label: formatText(options.locale, "tuiCliClaude"),
+        value: "claude",
+      },
+      {
+        label: formatText(options.locale, "tuiCliOpenCode"),
+        value: "opencode",
+      },
+      {
+        label: formatText(options.locale, "tuiCliAll"),
+        value: "all",
       },
       {
         label: formatText(options.locale, "tuiBack"),
@@ -100,6 +126,10 @@ export function getDefaultChoiceIndex(
 
   if (step === "locale") {
     currentValue = options.locale;
+  } else if (step === "cli") {
+    currentValue = options.cliTargets.length === 3
+      ? "all"
+      : options.cliTargets[0] ?? "codex";
   } else if (step === "scope") {
     currentValue = options.global ? "global" : "project";
   } else if (step === "force") {

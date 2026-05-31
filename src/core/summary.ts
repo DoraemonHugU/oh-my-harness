@@ -29,7 +29,8 @@ export function groupSummaryEntries(
 
 export function hasAgentsBackup(summary: SummaryEntry[]): boolean {
   return summary.some((entry) =>
-    entry.target.endsWith(`${path.sep}agents.back.md`),
+    entry.target.endsWith(`${path.sep}agents.back.md`)
+    || entry.target.endsWith(`${path.sep}claude.back.md`),
   );
 }
 

@@ -26,6 +26,17 @@ test("parseArgs parses init flags and project name", () => {
   assert.equal(parsed.lang, "en");
 });
 
+test("parseArgs parses the target CLI", () => {
+  const parsed = parseArgs([
+    "init",
+    "--cli",
+    "claude",
+    "--no-tui",
+  ]);
+
+  assert.deepEqual(parsed.cliTargets, ["claude"]);
+});
+
 test("resolveInitOptions keeps locale and resolves target root", () => {
   const options = resolveInitOptions(
     {
@@ -38,6 +49,7 @@ test("resolveInitOptions keeps locale and resolves target root", () => {
       help: false,
       version: false,
       lang: "zh",
+      cliTargets: [],
     },
     "zh",
   );
@@ -47,4 +59,5 @@ test("resolveInitOptions keeps locale and resolves target root", () => {
   assert.equal(options.global, false);
   assert.equal(options.dryRun, true);
   assert.equal(options.targetRoot, path.resolve(process.cwd(), "demo"));
+  assert.deepEqual(options.cliTargets, ["codex"]);
 });

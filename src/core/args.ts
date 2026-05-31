@@ -1,6 +1,20 @@
 import { formatText } from "./text.js";
 import { resolveLocale } from "./terminal.js";
-import type { Locale, ParsedArgs } from "./types.js";
+import type { AgentCli, Locale, ParsedArgs } from "./types.js";
+
+const ALL_AGENT_CLIS: AgentCli[] = ["codex", "claude", "opencode"];
+
+function parseCliTargets(value: string): AgentCli[] | null {
+  if (value === "all") {
+    return [...ALL_AGENT_CLIS];
+  }
+
+  if (ALL_AGENT_CLIS.includes(value as AgentCli)) {
+    return [value as AgentCli];
+  }
+
+  return null;
+}
 
 export function parseArgs(argv: string[]): ParsedArgs {
   let command: string | null = null;
@@ -12,6 +26,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
   let help = false;
   let version = false;
   let lang: Locale | null = null;
+  let cliTargets: AgentCli[] = [];
   const defaultLocale = resolveLocale(null);
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -52,6 +67,22 @@ export function parseArgs(argv: string[]): ParsedArgs {
       continue;
     }
 
+    if (arg === "--cli") {
+      const value = argv[index + 1];
+      if (!value) {
+        throw new Error(`${formatText(lang ?? defaultLocale, "unknownArg")}: ${arg}`);
+      }
+      const parsedCliTargets = parseCliTargets(value);
+      if (!parsedCliTargets) {
+        throw new Error(
+          `${formatText(lang ?? defaultLocale, "unknownArg")}: ${value}`,
+        );
+      }
+      cliTargets = parsedCliTargets;
+      index += 1;
+      continue;
+    }
+
     if (arg === "--lang") {
       const value = argv[index + 1];
       if (!value) {
@@ -87,6 +118,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
     help,
     version,
     lang,
+    cliTargets,
   };
 }
 
@@ -106,6 +138,7 @@ export function printUsage(locale: Locale): void {
   console.log(`  -g, --global             ${formatText(locale, "globalFlag")}`);
   console.log(`      --dry-run            ${formatText(locale, "dryRunFlag")}`);
   console.log(`      --no-tui             ${formatText(locale, "noTuiFlag")}`);
+  console.log(`      --cli <target>       ${formatText(locale, "cliFlag")}`);
   console.log(`      --lang <zh|en>       ${formatText(locale, "langFlag")}`);
   console.log("");
   console.log(formatText(locale, "notes"));

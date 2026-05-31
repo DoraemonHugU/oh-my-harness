@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Box, Text, render, useApp, useInput } from "ink";
 import { TextInput } from "@inkjs/ui";
 
-import { performInit } from "../core/init.js";
+import { performInit, resolveSkillsTargetRoots } from "../core/init.js";
 import {
   checkForPackageUpdate,
   type PackageUpdateInfo,
@@ -12,7 +12,7 @@ import {
 } from "../core/runtime.js";
 import { groupSummaryEntries, hasAgentsBackup, ORDERED_KINDS, summaryHeading } from "../core/summary.js";
 import { formatText } from "../core/text.js";
-import type { InitOptions, Locale, SummaryEntry } from "../core/types.js";
+import type { AgentCli, InitOptions, Locale, SummaryEntry } from "../core/types.js";
 import {
   BACK_OPTION_VALUE,
   buildStepOptions,
@@ -50,6 +50,17 @@ function sectionColor(kind: string): string {
     return "yellow";
   }
   return "gray";
+}
+
+function resolveCliTargets(value: string): AgentCli[] {
+  if (value === "all") {
+    return ["codex", "claude", "opencode"];
+  }
+  return [value as AgentCli];
+}
+
+function formatCliTargets(targets: AgentCli[]): string {
+  return targets.join(", ");
 }
 
 function InitWizard({
@@ -112,6 +123,19 @@ function InitWizard({
         global: value === "global",
       }));
       setScreen(nextWizardStep("scope"));
+      return;
+    }
+
+    if (screen === "cli") {
+      if (value === BACK_OPTION_VALUE) {
+        setScreen(previousWizardStep("cli") ?? "target");
+        return;
+      }
+      setOptions((previous) => ({
+        ...previous,
+        cliTargets: resolveCliTargets(value),
+      }));
+      setScreen(nextWizardStep("cli"));
       return;
     }
 
@@ -281,14 +305,15 @@ function InitWizard({
 
   const renderSummary = (): React.JSX.Element => {
     const groups = groupSummaryEntries(summary);
-    const skillsTarget = options.global
-      ? path.join(os.homedir(), ".agents", "skills")
-      : path.join(options.targetRoot, ".agents", "skills");
-    const globalConfig = path.join(os.homedir(), ".codex", "config.toml");
+    const skillsTarget = resolveSkillsTargetRoots(options).join(", ");
+    const globalConfig = options.cliTargets.includes("codex")
+      ? path.join(os.homedir(), ".codex", "config.toml")
+      : formatText(options.locale, "codexConfigSkipped");
 
     return (
       <Box flexDirection="column">
         <Text>{`${formatText(options.locale, "initTarget")} ${options.targetRoot}`}</Text>
+        <Text>{`${formatText(options.locale, "cliTargets")} ${formatCliTargets(options.cliTargets)}`}</Text>
         <Text>{`${formatText(options.locale, "mode")} ${
           options.dryRun
             ? formatText(options.locale, "modeDryRun")
@@ -373,6 +398,9 @@ function InitWizard({
     if (screen === "target") {
       return `${formatText(options.locale, "tuiStepTargetDesc")} ${formatText(options.locale, "tuiEditPathHint")}`;
     }
+    if (screen === "cli") {
+      return formatText(options.locale, "tuiStepCliDesc");
+    }
     if (screen === "scope") {
       return formatText(options.locale, "tuiStepScopeDesc");
     }
@@ -453,6 +481,10 @@ function InitWizard({
       return renderChoiceList(formatText(options.locale, "tuiStepScope"), stepOptions);
     }
 
+    if (screen === "cli") {
+      return renderChoiceList(formatText(options.locale, "tuiStepCli"), stepOptions);
+    }
+
     if (screen === "force") {
       return renderChoiceList(formatText(options.locale, "tuiStepForce"), stepOptions);
     }
@@ -466,6 +498,7 @@ function InitWizard({
         <Box flexDirection="column" width={leftWidth}>
           <Text>{formatText(options.locale, "tuiStepConfirm")}</Text>
           <Text>{`${formatText(options.locale, "tuiMenuTarget")}: ${options.targetRoot}`}</Text>
+          <Text>{`${formatText(options.locale, "tuiMenuCli")}: ${formatCliTargets(options.cliTargets)}`}</Text>
           <Text>{`${formatText(options.locale, "tuiMenuScope")}: ${
             options.global
               ? formatText(options.locale, "tuiScopeGlobal")
