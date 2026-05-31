@@ -17,6 +17,7 @@ function createOptions(overrides: Partial<InitOptions> = {}): InitOptions {
     global: false,
     dryRun: false,
     locale: "zh",
+    cliTargets: ["codex"],
     ...overrides,
   };
 }
@@ -36,6 +37,15 @@ test("scope step keeps both scope choices and back", () => {
   assert.deepEqual(
     stepOptions.map((option) => option.value),
     ["project", "global", BACK_OPTION_VALUE],
+  );
+});
+
+test("cli step keeps all target choices and back", () => {
+  const stepOptions = buildStepOptions("cli", createOptions());
+
+  assert.deepEqual(
+    stepOptions.map((option) => option.value),
+    ["codex", "claude", "opencode", "all", BACK_OPTION_VALUE],
   );
 });
 
@@ -69,4 +79,11 @@ test("default choice index points at the current force value", () => {
   const stepOptions = buildStepOptions("force", options);
 
   assert.equal(getDefaultChoiceIndex("force", options, stepOptions), 1);
+});
+
+test("default choice index points at the current CLI target", () => {
+  const options = createOptions({ cliTargets: ["opencode"] });
+  const stepOptions = buildStepOptions("cli", options);
+
+  assert.equal(getDefaultChoiceIndex("cli", options, stepOptions), 2);
 });

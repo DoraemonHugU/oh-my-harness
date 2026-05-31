@@ -1,6 +1,6 @@
-# Codex 审查评论模板
+# PR Review 评论模板
 
-## 默认模板
+## 默认云端 Codex 模板
 
 ```text
 @codex review

@@ -38,6 +38,7 @@ export function resolveInitOptions(
     dryRun: parsed.dryRun,
     targetRoot,
     locale,
+    cliTargets: parsed.cliTargets.length > 0 ? parsed.cliTargets : ["codex"],
   };
 }
 
@@ -85,27 +86,74 @@ async function ensureTargetRoot(
   }
 }
 
-async function patchAgentsFile(
+function includesCli(options: InitOptions, cli: "codex" | "claude" | "opencode"): boolean {
+  return options.cliTargets.includes(cli);
+}
+
+function usesAgentsInstructionFile(options: InitOptions): boolean {
+  return includesCli(options, "codex") || includesCli(options, "opencode");
+}
+
+function createClaudeInstructionsContent(
+  sourceContent: string,
+  referencesAgentsFile: boolean,
+): string {
+  return referencesAgentsFile
+    ? "@AGENTS.md\n"
+    : sourceContent.replaceAll("AGENTS.md", "CLAUDE.md");
+}
+
+function normalizeMarkdownContent(content: string): string {
+  return content.endsWith("\n") ? content : `${content}\n`;
+}
+
+function createClaudeReviewerAgentContent(promptBody: string): string {
+  return [
+    "---",
+    "name: reviewer",
+    "description: Review completed code changes against the implementation plan, project rules, and testing expectations.",
+    "model: opus",
+    "tools: Read, Grep, Glob, Bash",
+    "disallowedTools: Write, Edit, MultiEdit",
+    "---",
+    normalizeMarkdownContent(promptBody),
+  ].join("\n");
+}
+
+function createOpenCodeReviewerAgentContent(promptBody: string): string {
+  return [
+    "---",
+    "description: Review completed code changes against the implementation plan, project rules, and testing expectations.",
+    "mode: subagent",
+    "permission:",
+    "  edit: deny",
+    "---",
+    normalizeMarkdownContent(promptBody),
+  ].join("\n");
+}
+
+async function patchInstructionFile(
   options: InitOptions,
   summary: SummaryEntry[],
+  fileName: string,
+  backupFileName: string,
+  templateContent: string,
 ): Promise<void> {
   const { targetRoot, dryRun } = options;
-  const sourcePath = path.join(TEMPLATE_REPO_ROOT, "AGENTS.md");
-  const targetPath = path.join(targetRoot, "AGENTS.md");
-  const backupPath = path.join(targetRoot, "agents.back.md");
-  const sourceContent = await fs.readFile(sourcePath, "utf8");
-  const templateContent = sourceContent.endsWith("\n")
-    ? sourceContent
-    : `${sourceContent}\n`;
+  const targetPath = path.join(targetRoot, fileName);
+  const backupPath = path.join(targetRoot, backupFileName);
+  const normalizedTemplate = templateContent.endsWith("\n")
+    ? templateContent
+    : `${templateContent}\n`;
 
   if (!(await pathExists(targetPath))) {
     if (!dryRun) {
-      await fs.writeFile(targetPath, templateContent, "utf8");
+      await fs.writeFile(targetPath, normalizedTemplate, "utf8");
     }
     summary.push({
       kind: "created",
       target: targetPath,
-      detail: formatText(options.locale, "writeAgentsTemplate"),
+      detail: formatText(options.locale, "writeInstructionsTemplate", fileName),
     });
     return;
   }
@@ -119,27 +167,56 @@ async function patchAgentsFile(
     kind: backupExists ? "replaced" : "created",
     target: backupPath,
     detail: backupExists
-      ? formatText(options.locale, "replaceAgentsBackup")
-      : formatText(options.locale, "createAgentsBackup"),
+      ? formatText(options.locale, "replaceInstructionsBackup", fileName)
+      : formatText(options.locale, "createInstructionsBackup", fileName),
   });
 
-  if (existing === templateContent) {
+  if (existing === normalizedTemplate) {
     summary.push({
       kind: "skipped",
       target: targetPath,
-      detail: formatText(options.locale, "agentsAlreadyLatest"),
+      detail: formatText(options.locale, "instructionsAlreadyLatest", fileName),
     });
     return;
   }
 
   if (!dryRun) {
-    await fs.writeFile(targetPath, templateContent, "utf8");
+    await fs.writeFile(targetPath, normalizedTemplate, "utf8");
   }
   summary.push({
     kind: "replaced",
     target: targetPath,
-    detail: formatText(options.locale, "replaceAgentsTemplate"),
+    detail: formatText(options.locale, "replaceInstructionsTemplate", fileName),
   });
+}
+
+async function patchInstructionFiles(
+  options: InitOptions,
+  summary: SummaryEntry[],
+): Promise<void> {
+  const sourcePath = path.join(TEMPLATE_REPO_ROOT, "AGENTS.md");
+  const sourceContent = await fs.readFile(sourcePath, "utf8");
+  const writeAgentsFile = usesAgentsInstructionFile(options);
+
+  if (writeAgentsFile) {
+    await patchInstructionFile(
+      options,
+      summary,
+      "AGENTS.md",
+      "agents.back.md",
+      sourceContent,
+    );
+  }
+
+  if (includesCli(options, "claude")) {
+    await patchInstructionFile(
+      options,
+      summary,
+      "CLAUDE.md",
+      "claude.back.md",
+      createClaudeInstructionsContent(sourceContent, writeAgentsFile),
+    );
+  }
 }
 
 function normalizeBlockContent(content: string): string {
@@ -174,11 +251,8 @@ async function patchGitignoreFile(
   summary: SummaryEntry[],
 ): Promise<void> {
   const { targetRoot, dryRun } = options;
-  const sourcePath = path.join(TEMPLATE_REPO_ROOT, "gitignore.template");
   const targetPath = path.join(targetRoot, ".gitignore");
-  const sourceContent = normalizeBlockContent(
-    await fs.readFile(sourcePath, "utf8"),
-  );
+  const sourceContent = createGitignoreTemplateContent(options);
   const exists = await pathExists(targetPath);
   const existingContent = exists ? await fs.readFile(targetPath, "utf8") : "";
   const result = replaceOrAppendBlock(
@@ -209,6 +283,50 @@ async function patchGitignoreFile(
   });
 }
 
+function createGitignoreTemplateContent(options: InitOptions): string {
+  const lines = [GITIGNORE_BEGIN];
+
+  if (includesCli(options, "codex") || includesCli(options, "opencode")) {
+    lines.push("!.agents/", "!.agents/skills/", "!.agents/skills/**");
+  }
+
+  if (includesCli(options, "codex")) {
+    lines.push(
+      "!.codex/",
+      "!.codex/hooks.json",
+    );
+  }
+
+  if (includesCli(options, "claude")) {
+    lines.push(
+      "!.claude/",
+      "!.claude/agents/",
+      "!.claude/agents/reviewer.md",
+      "!.claude/skills/",
+      "!.claude/skills/**",
+    );
+  }
+
+  if (includesCli(options, "opencode")) {
+    lines.push(
+      "!.opencode/",
+      "!.opencode/agents/",
+      "!.opencode/agents/reviewer.md",
+      "!.opencode/plugins/",
+      "!.opencode/plugins/oh-my-harness-tree.js",
+    );
+  }
+
+  lines.push(
+    "!.oh-my-harness/",
+    "!.oh-my-harness/hooks/",
+    "!.oh-my-harness/hooks/tree.mjs",
+    "!.oh-my-harness/tree.md",
+    GITIGNORE_END,
+  );
+  return `${lines.join("\n")}\n`;
+}
+
 async function listTemplateFiles(): Promise<string[]> {
   const collected: string[] = [];
 
@@ -230,6 +348,33 @@ async function listTemplateFiles(): Promise<string[]> {
   return collected;
 }
 
+function shouldInstallTemplateFile(relativePath: string, options: InitOptions): boolean {
+  const normalizedPath = relativePath.split(path.sep).join("/");
+  if (normalizedPath === "AGENTS.md" || normalizedPath === "gitignore.template") {
+    return false;
+  }
+
+  if (!includesCli(options, "codex")) {
+    if (normalizedPath.startsWith(".codex/")) {
+      return false;
+    }
+  }
+
+  if (!includesCli(options, "claude")) {
+    if (normalizedPath.startsWith(".claude/")) {
+      return false;
+    }
+  }
+
+  if (!includesCli(options, "opencode")) {
+    if (normalizedPath.startsWith(".opencode/")) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 async function installProjectTemplates(
   options: InitOptions,
   summary: SummaryEntry[],
@@ -238,7 +383,7 @@ async function installProjectTemplates(
 
   for (const sourcePath of templateFiles) {
     const relativePath = path.relative(TEMPLATE_REPO_ROOT, sourcePath);
-    if (relativePath === "AGENTS.md" || relativePath === "gitignore.template") {
+    if (!shouldInstallTemplateFile(relativePath, options)) {
       continue;
     }
 
@@ -267,7 +412,7 @@ async function installProjectTemplates(
     });
   }
 
-  await patchAgentsFile(options, summary);
+  await patchInstructionFiles(options, summary);
   await patchGitignoreFile(options, summary);
 }
 
@@ -279,44 +424,67 @@ async function listSkillNames(): Promise<string[]> {
     .sort((a: string, b: string) => a.localeCompare(b));
 }
 
+export function resolveSkillsTargetRoots(options: InitOptions): string[] {
+  const targetRoots = new Set<string>();
+
+  if (includesCli(options, "codex") || includesCli(options, "opencode")) {
+    targetRoots.add(
+      options.global
+        ? path.join(os.homedir(), ".agents", "skills")
+        : path.join(options.targetRoot, ".agents", "skills"),
+    );
+  }
+
+  if (includesCli(options, "claude")) {
+    targetRoots.add(
+      options.global
+        ? path.join(os.homedir(), ".claude", "skills")
+        : path.join(options.targetRoot, ".claude", "skills"),
+    );
+  }
+
+  return [...targetRoots].sort((left, right) => left.localeCompare(right));
+}
+
 async function installSkills(
   options: InitOptions,
   summary: SummaryEntry[],
 ): Promise<void> {
-  const skillsTargetRoot = options.global
-    ? path.join(os.homedir(), ".agents", "skills")
-    : path.join(options.targetRoot, ".agents", "skills");
-  await ensureDirectory(skillsTargetRoot, options.dryRun);
+  const skillsTargetRoots = resolveSkillsTargetRoots(options);
 
-  for (const skillName of await listSkillNames()) {
-    const sourceDir = path.join(SKILLS_SOURCE_ROOT, skillName);
-    const targetDir = path.join(skillsTargetRoot, skillName);
-    const exists = await pathExists(targetDir);
+  for (const skillsTargetRoot of skillsTargetRoots) {
+    await ensureDirectory(skillsTargetRoot, options.dryRun);
 
-    if (exists && !options.force) {
+    for (const skillName of await listSkillNames()) {
+      const sourceDir = path.join(SKILLS_SOURCE_ROOT, skillName);
+      const targetDir = path.join(skillsTargetRoot, skillName);
+      const exists = await pathExists(targetDir);
+
+      if (exists && !options.force) {
+        summary.push({
+          kind: "skipped",
+          target: targetDir,
+          detail: formatText(options.locale, "skillDirExistsNoForce"),
+        });
+        continue;
+      }
+
+      if (exists && !options.dryRun) {
+        await fs.rm(targetDir, { recursive: true, force: true });
+      }
+
+      await ensureDirectory(path.dirname(targetDir), options.dryRun);
+      if (!options.dryRun) {
+        await fs.cp(sourceDir, targetDir, { recursive: true });
+      }
       summary.push({
-        kind: "skipped",
+        kind: exists ? "replaced" : "created",
         target: targetDir,
-        detail: formatText(options.locale, "skillDirExistsNoForce"),
+        detail: options.global
+          ? formatText(options.locale, "installGlobalSkill")
+          : formatText(options.locale, "installProjectSkill"),
       });
-      continue;
     }
-
-    if (exists && !options.dryRun) {
-      await fs.rm(targetDir, { recursive: true, force: true });
-    }
-
-    await ensureDirectory(path.dirname(targetDir), options.dryRun);
-    if (!options.dryRun) {
-      await fs.cp(sourceDir, targetDir, { recursive: true });
-    }
-    summary.push({
-      kind: exists ? "replaced" : "created",
-      target: targetDir,
-      detail: options.global
-        ? formatText(options.locale, "installGlobalSkill")
-        : formatText(options.locale, "installProjectSkill"),
-    });
   }
 }
 
@@ -574,6 +742,74 @@ async function installAgentFiles(
   }
 }
 
+async function writeGeneratedAgentFile(
+  options: InitOptions,
+  summary: SummaryEntry[],
+  targetPath: string,
+  content: string,
+): Promise<void> {
+  const exists = await pathExists(targetPath);
+
+  if (exists && !options.force) {
+    summary.push({
+      kind: "skipped",
+      target: targetPath,
+      detail: formatText(options.locale, "agentMarkdownExistsNoForce"),
+    });
+    return;
+  }
+
+  await ensureDirectory(path.dirname(targetPath), options.dryRun);
+  if (!options.dryRun) {
+    await fs.writeFile(targetPath, content, "utf8");
+  }
+  summary.push({
+    kind: exists ? "replaced" : "created",
+    target: targetPath,
+    detail: exists
+      ? formatText(options.locale, "replaceAgentMarkdown")
+      : formatText(options.locale, "createAgentMarkdown"),
+  });
+}
+
+async function installReviewerAgentFiles(
+  options: InitOptions,
+  summary: SummaryEntry[],
+): Promise<void> {
+  if (!includesCli(options, "claude") && !includesCli(options, "opencode")) {
+    return;
+  }
+
+  const promptBody = await fs.readFile(
+    path.join(AGENTS_SOURCE_ROOT, "reviewer.md"),
+    "utf8",
+  );
+
+  if (includesCli(options, "claude")) {
+    const claudeAgentsRoot = options.global
+      ? path.join(os.homedir(), ".claude", "agents")
+      : path.join(options.targetRoot, ".claude", "agents");
+    await writeGeneratedAgentFile(
+      options,
+      summary,
+      path.join(claudeAgentsRoot, "reviewer.md"),
+      createClaudeReviewerAgentContent(promptBody),
+    );
+  }
+
+  if (includesCli(options, "opencode")) {
+    const openCodeAgentsRoot = options.global
+      ? path.join(os.homedir(), ".config", "opencode", "agents")
+      : path.join(options.targetRoot, ".opencode", "agents");
+    await writeGeneratedAgentFile(
+      options,
+      summary,
+      path.join(openCodeAgentsRoot, "reviewer.md"),
+      createOpenCodeReviewerAgentContent(promptBody),
+    );
+  }
+}
+
 function isGitRepository(repoRoot: string): boolean {
   const result = spawnSync(
     "git",
@@ -644,7 +880,7 @@ async function refreshInitialTree(
 
   const scriptPath = path.join(
     options.targetRoot,
-    ".codex",
+    ".oh-my-harness",
     "hooks",
     "tree.mjs",
   );
@@ -695,20 +931,24 @@ export async function performInit(options: InitOptions): Promise<SummaryEntry[]>
   await ensureGitRepository(options, summary);
   await installProjectTemplates(options, summary);
   await installSkills(options, summary);
-  await patchCodexConfig(options, summary);
-  await installAgentFiles(options, summary);
+  if (includesCli(options, "codex")) {
+    await patchCodexConfig(options, summary);
+    await installAgentFiles(options, summary);
+  }
+  await installReviewerAgentFiles(options, summary);
   await refreshInitialTree(options, summary);
   return summary;
 }
 
 export function printSummary(options: InitOptions, summary: SummaryEntry[]): void {
   const groups = groupSummaryEntries(summary);
-  const skillsTarget = options.global
-    ? path.join(os.homedir(), ".agents", "skills")
-    : path.join(options.targetRoot, ".agents", "skills");
-  const globalConfig = path.join(os.homedir(), ".codex", "config.toml");
+  const skillsTarget = resolveSkillsTargetRoots(options).join(", ");
+  const globalConfig = includesCli(options, "codex")
+    ? path.join(os.homedir(), ".codex", "config.toml")
+    : formatText(options.locale, "codexConfigSkipped");
 
   console.log(`${color(formatText(options.locale, "initTarget"), "cyan")} ${options.targetRoot}`);
+  console.log(`${color(formatText(options.locale, "cliTargets"), "cyan")} ${options.cliTargets.join(", ")}`);
   console.log(
     `${color(formatText(options.locale, "mode"), "cyan")} ${
       options.dryRun

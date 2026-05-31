@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.oh-my-harness/hooks/tree.mjs",
+              "--hook"
+            ],
+            "timeout": 10,
+            "statusMessage": "Refreshing tree"
+          }
+        ]
+      }
+    ]
+  }
+}

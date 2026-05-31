@@ -6,11 +6,24 @@
 ![node](https://img.shields.io/badge/Node.js-%3E%3D18-43853d)
 ![typescript](https://img.shields.io/badge/TypeScript-6.0%2B-3178c6)
 
-中文优先的 Codex `PR-first / plan-first` implementation harness。
+语言: [简体中文](./README.md) | [English](./README.en.md)
 
-`oh-my-harness` 是一个用于初始化和运行 Codex `PR-first / plan-first` 工作流的轻量 harness：它提供 CLI、仓库模板、skills 和可选的全局配置 patch，把 research、plan、PR 准备和 review 尽量放到更低成本的环境里，再把必要的本地代码编写、验证和交付留给 Codex。
+中文优先的 Codex / Claude Code / OpenCode `PR-first / plan-first` implementation harness。
 
-## 优先支持 Codex , CC和OC支持正在路上
+`oh-my-harness` 是一个用于初始化和运行 `PR-first / plan-first` 工作流的轻量 harness：它提供 CLI、仓库模板、skills 和可选的全局配置 patch，把 research、plan、PR 准备和 review 尽量放到更低成本的环境里，再把必要的本地代码编写、验证和交付留给本地 coding agent。
+
+## CLI 支持范围
+
+默认目标仍是 Codex。也可以通过 `--cli claude`、`--cli opencode` 或 `--cli all` 选择 Claude Code、OpenCode 或全部目标。
+
+最小交集策略：
+
+- Codex / OpenCode 使用 `AGENTS.md` 和 `.agents/skills/`。
+- Claude Code 单目标只使用 `CLAUDE.md` 和 `.claude/skills/`。
+- 多目标同时包含 Claude Code 和 Codex/OpenCode 时，`AGENTS.md` 作为共享 instruction 源，`CLAUDE.md` 只保留 `@AGENTS.md` 引用入口。
+- Codex 专用的 `~/.codex/config.toml` 和 `~/.codex/agents/*` 只在目标包含 Codex 时安装。
+- Claude Code 和 OpenCode 只额外安装 reviewer 子代理，不安装 explorer；Claude reviewer 固定 `model: opus`，OpenCode reviewer 不指定 model 以继承当前模型。
+- 不把 Codex agent TOML 直接转换为 Claude/OpenCode subagent 配置；不同 CLI 的 subagent 字段和加载语义不同，当前只安装可共享的 rules、skills 和 reviewer agent。
 
 ## 从现在开始,合理利用你的订阅
 
@@ -64,14 +77,19 @@
 - [Codex code review in GitHub](https://developers.openai.com/codex/integrations/github)：`@codex review`、自动审查和 `AGENTS.md` review guidance 的官方说明
 - [Codex pricing](https://developers.openai.com/codex/pricing)：Codex Web / CLI / 云端审查能力与额度说明
 - [Connecting GitHub to ChatGPT](https://help.openai.com/en/articles/11145903-connecting-github-to-chatgpt)：将 GitHub 仓库连接到 ChatGPT 的官方教程
+- [Claude Code skills](https://code.claude.com/docs/en/skills)：Claude Code project skills 的 `.claude/skills/<name>/SKILL.md` 位置。
+- [Claude Code subagents](https://code.claude.com/docs/en/sub-agents)：Claude Code subagent 的 `.claude/agents/` 和 plugin agent 语义。
+- [OpenCode rules](https://dev.opencode.ai/docs/rules/)：OpenCode 的 `AGENTS.md` / `CLAUDE.md` rules 兼容。
+- [OpenCode skills](https://opencode.ai/docs/skills/)：OpenCode 对 `.opencode/skills`、`.claude/skills`、`.agents/skills` 的发现规则。
+- [OpenCode agents](https://opencode.ai/docs/agents/)：OpenCode 的 `.opencode/agents/` 和全局 `~/.config/opencode/agents/` agent 文件位置。
 
 
 ## 主要功能
 它提供一套可初始化到目标仓库中的工作流骨架，包括 CLI、仓库模板、skills 和可选的全局配置 patch：
 
-- 将 `AGENTS.md`、`.github/`、`docs/specs/` 等模板写入目标仓库
-- 安装项目级或全局级 skills
-- patch 全局 `~/.codex/config.toml` 和 `~/.codex/agents/*`
+- 按目标 CLI 写入 `AGENTS.md` / `CLAUDE.md`、`.github/`、`docs/specs/` 等模板
+- 按目标 CLI 安装项目级或全局级 skills
+- 目标包含 Codex 时 patch 全局 `~/.codex/config.toml` 和 `~/.codex/agents/*`
 - 用统一工作流把需求收敛到 `Implementation PR / Implementation Plan`
 
 ## 安装
@@ -117,7 +135,7 @@ npx @doraemon-hug-u/oh-my-harness init my-project
 命令行参数不会绕过 TUI，而是作为默认值带入向导。例如：
 
 ```bash
-npx @doraemon-hug-u/oh-my-harness init my-project --force --global --dry-run --lang en
+npx @doraemon-hug-u/oh-my-harness init my-project --cli all --force --global --dry-run --lang en
 ```
 
 在非交互环境中，`init` 会直接执行，不进入 TUI。例如：
@@ -201,14 +219,15 @@ Use $harness to pick up the current implementation plan and complete the impleme
 
 ## TUI 向导
 
-`init` 向导当前是固定 6 步：
+`init` 向导当前是固定 7 步：
 
 1. 输出语言
 2. 目标目录
-3. skills 安装位置
-4. `--force`
-5. `--dry-run`
-6. 确认执行
+3. 目标 CLI
+4. skills 安装位置
+5. `--force`
+6. `--dry-run`
+7. 确认执行
 
 说明：
 
@@ -224,6 +243,9 @@ Use $harness to pick up the current implementation plan and complete the impleme
 ```bash
 npx @doraemon-hug-u/oh-my-harness init my-project --lang zh
 npx @doraemon-hug-u/oh-my-harness init my-project --lang en
+npx @doraemon-hug-u/oh-my-harness init my-project --cli claude
+npx @doraemon-hug-u/oh-my-harness init my-project --cli opencode
+npx @doraemon-hug-u/oh-my-harness init my-project --cli all
 ```
 
 这些参数在交互终端里会变成 TUI 的默认值：
@@ -233,22 +255,39 @@ npx @doraemon-hug-u/oh-my-harness init my-project --lang en
 - `--force`
 - `--global`
 - `--lang <zh|en>`
+- `--cli <codex|claude|opencode|all>`
 
 ## `init` 会写入什么
 
 项目级：
 
-- `<target>/AGENTS.md`
-- `<target>/agents.back.md`（仅目标已存在 `AGENTS.md` 时）
+- `<target>/AGENTS.md`（Codex / OpenCode；或多目标共享 instruction 源）
+- `<target>/CLAUDE.md`（Claude Code；Claude-only 时为完整模板，多目标共享时为 `@AGENTS.md` 引用入口）
+- `<target>/agents.back.md`（仅本次会写入且目标已存在 `AGENTS.md` 时）
+- `<target>/claude.back.md`（仅本次会写入且目标已存在 `CLAUDE.md` 时）
 - `<target>/.github/**`
 - `<target>/docs/specs/**`
-- `<target>/.agents/skills/**`
+- `<target>/.agents/skills/**`（Codex / OpenCode）
+- `<target>/.claude/skills/**`（Claude Code）
+- `<target>/.oh-my-harness/hooks/tree.mjs`
+- `<target>/.oh-my-harness/tree.md`
+- `<target>/.claude/agents/reviewer.md`（Claude Code）
+- `<target>/.opencode/agents/reviewer.md`（OpenCode）
 
 全局级：
 
-- `~/.codex/config.toml`
-- `~/.codex/agents/*`
-- `~/.agents/skills/*`（仅 `--global` 时）
+- `~/.codex/config.toml`（仅目标包含 Codex）
+- `~/.codex/agents/*`（仅目标包含 Codex）
+- `~/.agents/skills/*`（仅 `--global` 且目标包含 Codex 或 OpenCode）
+- `~/.claude/skills/*`（仅 `--global` 且目标包含 Claude Code）
+- `~/.claude/agents/reviewer.md`（仅 `--global` 且目标包含 Claude Code）
+- `~/.config/opencode/agents/reviewer.md`（仅 `--global` 且目标包含 OpenCode）
+
+平台 hook 触发器：
+
+- `<target>/.codex/hooks.json`（仅目标包含 Codex）
+- `<target>/.claude/skills/oh-my-harness-hooks/`（仅目标包含 Claude Code，skills-directory plugin）
+- `<target>/.opencode/plugins/oh-my-harness-tree.js`（仅目标包含 OpenCode）
 
 ## 命令参数
 
@@ -257,22 +296,56 @@ npx @doraemon-hug-u/oh-my-harness init my-project --lang en
 | `projectName` | 目标目录；不传时使用当前目录 |
 | `--dry-run` | 只读取和计算变更，不落盘 |
 | `--no-tui` | 即使在交互终端中也直接执行，不进入 TUI |
+| `--cli <codex\|claude\|opencode\|all>` | 选择初始化目标 CLI；默认 `codex` |
 | `--force` | 覆盖同名模板文件和 skill 目录，并 patch 已有全局配置 |
-| `--global` | 将 skills 安装到 `~/.agents/skills/` |
+| `--global` | 将 skills 安装到目标 CLI 对应的全局 skills 目录 |
 | `--lang <zh\|en>` | 强制指定 CLI 输出语言 |
 
-## `AGENTS.md` 覆盖行为
+## instruction 文件覆盖行为
 
 - 如果目标项目不存在 `AGENTS.md`，直接写入模板。
 - 如果目标项目已存在 `AGENTS.md`，先备份为 `agents.back.md`，再覆盖为新模板。
-- CLI 会额外提示一条精简后续操作：对比 `AGENTS.md` 与 `agents.back.md`，只迁移仍有价值的项目级规则，再清理备份文件。
+- Claude-only 目标只写入 `CLAUDE.md`；不会新建或覆盖 `AGENTS.md`。
+- 多目标同时包含 Claude Code 和 Codex/OpenCode 时，写入 `AGENTS.md`，并让 `CLAUDE.md` 只引用 `AGENTS.md`。
+- CLI 会额外提示一条精简后续操作：对比 instruction 文件与对应备份，只迁移仍有价值的项目级规则，再清理备份文件。
+
+## reviewer 子代理行为
+
+- Claude Code / OpenCode 只安装 `reviewer` 子代理，不安装 `explorer`。两者的 explorer 使用各 CLI 自带能力。
+- reviewer prompt body 直接来自 `agents/reviewer.md`；平台 agent 文件只在前面增加各自 frontmatter。
+- Claude Code reviewer frontmatter 使用 `model: opus`。
+- OpenCode reviewer frontmatter 不写 `model`，让它继承当前会话模型。
+
+## prompt 驱动安装边界
+
+- 支持让 agent 根据用户 prompt 拼出并执行 `oh-my-harness init ... --no-tui`。
+- 支持通过 `--cli <codex|claude|opencode|all>` 选择目标 CLI。
+- 不支持从用户 prompt 传入任意 reviewer prompt body；reviewer 正文固定来自包内 `agents/reviewer.md`，以避免安装结果不可追踪。
 
 ## Safety and rollback
 
 - 作用到已有仓库前，先运行 `--dry-run`
-- 已有 `AGENTS.md` 会先备份为 `agents.back.md`
-- 只有选择全局安装时，才会修改 `~/.codex/config.toml` 和 `~/.codex/agents/*`
-- 如需回滚项目模板，可恢复 `agents.back.md` 并删除本次新增的模板文件
+- 已有 `AGENTS.md` / `CLAUDE.md` 会先备份为对应的 `agents.back.md` / `claude.back.md`
+- 只有目标包含 Codex 时，才会修改 `~/.codex/config.toml` 和 `~/.codex/agents/*`
+- 如需回滚 instruction 文件，可恢复 `agents.back.md` / `claude.back.md`，再删除本次新增的 instruction 文件。
+- 树刷新 hook 的共享脚本在 `.oh-my-harness/hooks/tree.mjs`；各 CLI 只安装自己的触发器，Claude Code / OpenCode 都走 plugin 形态，方便删除。
+
+## 删除 / 卸载
+
+当前没有自动 `uninstall` 子命令；删除需要按目标 CLI 清理本次 init 写入的文件。
+
+项目级删除清单：
+
+- Codex：删除 `AGENTS.md`、`.agents/skills/`、`.codex/hooks.json`。
+- Claude Code：删除 `CLAUDE.md`、`.claude/agents/reviewer.md`，并删除 `.claude/skills/` 中由本包写入的 skills；如果只移除 hook，删除 `.claude/skills/oh-my-harness-hooks/`。
+- OpenCode：删除 `AGENTS.md`、`.agents/skills/`、`.opencode/agents/reviewer.md`、`.opencode/plugins/oh-my-harness-tree.js`。
+- 共享工作流模板：按需删除 `.github/PULL_REQUEST_TEMPLATE/`、`.github/writing-plan.md`、`.github/pr-review-comment.md`、`docs/specs/`、`.oh-my-harness/hooks/tree.mjs`、`.oh-my-harness/tree.md` 和 `.gitignore` 中的 `oh-my-harness` block。
+
+全局级删除清单：
+
+- Codex：清理 `~/.codex/agents/*` 中由本包写入的条目，并从 `~/.codex/config.toml` 移除对应 `agents.*` 配置。
+- Claude Code：删除 `~/.claude/skills/` 中由本包写入的 skills，以及 `~/.claude/agents/reviewer.md`。
+- OpenCode：删除 `~/.agents/skills/` 中由本包写入的 skills，以及 `~/.config/opencode/agents/reviewer.md`。
 
 ## 当前设计
 
@@ -290,7 +363,8 @@ npx @doraemon-hug-u/oh-my-harness init my-project --lang en
 
 - `.github/PULL_REQUEST_TEMPLATE/implementation.md`：实现型 PR 模板。
 - `.github/PULL_REQUEST_TEMPLATE/research.md`：研究型 PR 模板。
-- `.github/codex-review-comment.md`：云端 Codex review 评论模板。
+- `.github/pr-review-comment.md`：PR review 评论模板；默认内容仍是云端 Codex review 的 `@codex review`。
+- `.oh-my-harness/hooks/tree.mjs`：跨平台树索引刷新脚本；由 Codex hook、Claude Code plugin、OpenCode plugin 触发。
 - `docs/specs/*`：项目级长期规范。
 
 ## 开源与许可证

@@ -3,7 +3,7 @@
 Use this file for navigation only. Verify implementation details by reading source files directly.
 
 - Source: `git ls-files --cached --others --exclude-standard`
-- Entries: 65
+- Entries: 76
 
 ```text
 ./
@@ -20,6 +20,14 @@ Use this file for navigation only. Verify implementation details by reading sour
 │   ├── reviewer.md
 │   ├── reviewer.toml
 │   └── worker.toml
+├── docs/
+│   ├── harness/
+│   │   └── plans/
+│   │       └── 2026-05-31-claude-opencode-support-plan.md
+│   ├── images/
+│   │   ├── code-review-settings.png
+│   │   └── workflow-overview.png
+│   └── agent-init-no-tui.md
 ├── plugin/
 │   ├── .codex-plugin/
 │   │   └── plugin.json
@@ -56,6 +64,8 @@ Use this file for navigation only. Verify implementation details by reading sour
 │   ├── core/
 │   │   ├── args.test.ts
 │   │   ├── args.ts
+│   │   ├── cli-entry.test.ts
+│   │   ├── init.test.ts
 │   │   ├── init.ts
 │   │   ├── runtime.test.ts
 │   │   ├── runtime.ts
@@ -64,6 +74,8 @@ Use this file for navigation only. Verify implementation details by reading sour
 │   │   ├── text.ts
 │   │   └── types.ts
 │   ├── ui/
+│   │   ├── init-wizard-options.test.ts
+│   │   ├── init-wizard-options.ts
 │   │   ├── init-wizard-state.test.ts
 │   │   ├── init-wizard-state.ts
 │   │   ├── init-wizard.tsx
@@ -72,28 +84,39 @@ Use this file for navigation only. Verify implementation details by reading sour
 │   └── cli.ts
 ├── templates/
 │   └── repo/
+│       ├── .claude/
+│       │   └── skills/
+│       │       └── oh-my-harness-hooks/
+│       │           ├── .claude-plugin/
+│       │           │   └── plugin.json
+│       │           └── hooks/
+│       │               └── hooks.json
 │       ├── .codex/
-│       │   ├── hooks/
-│       │   │   └── tree.mjs
 │       │   └── hooks.json
 │       ├── .github/
 │       │   ├── PULL_REQUEST_TEMPLATE/
 │       │   │   ├── implementation.md
 │       │   │   └── research.md
-│       │   ├── codex-review-comment.md
+│       │   ├── pr-review-comment.md
 │       │   └── writing-plan.md
+│       ├── .oh-my-harness/
+│       │   └── hooks/
+│       │       └── tree.mjs
+│       ├── .opencode/
+│       │   └── plugins/
+│       │       └── oh-my-harness-tree.js
 │       ├── docs/
 │       │   └── specs/
 │       │       ├── agent-workflow.md
-│       │       ├── architect-design.md
 │       │       └── review-guidelines.md
-│       ├── .gitignore
-│       └── AGENTS.md
+│       ├── AGENTS.md
+│       └── gitignore.template
 ├── .gitignore
 ├── config.toml
 ├── LICENSE
 ├── package-lock.json
 ├── package.json
+├── README.en.md
 ├── README.md
 ├── THIRD_PARTY_NOTICES.md
 └── tsconfig.json

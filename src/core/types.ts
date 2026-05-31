@@ -13,12 +13,15 @@ export type SummaryEntry = {
 
 export type Locale = "zh" | "en";
 
+export type AgentCli = "codex" | "claude" | "opencode";
+
 export type InitOptions = {
   force: boolean;
   global: boolean;
   dryRun: boolean;
   targetRoot: string;
   locale: Locale;
+  cliTargets: AgentCli[];
 };
 
 export type ParsedArgs = {
@@ -31,4 +34,5 @@ export type ParsedArgs = {
   help: boolean;
   version: boolean;
   lang: Locale | null;
+  cliTargets: AgentCli[];
 };

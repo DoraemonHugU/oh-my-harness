@@ -3,9 +3,19 @@
 !.agents/skills/
 !.agents/skills/**
 !.codex/
-!.codex/hooks/
 !.codex/hooks.json
-!.codex/hooks/tree.mjs
+!.claude/
+!.claude/agents/
+!.claude/agents/reviewer.md
+!.claude/skills/
+!.claude/skills/**
+!.opencode/
+!.opencode/agents/
+!.opencode/agents/reviewer.md
+!.opencode/plugins/
+!.opencode/plugins/oh-my-harness-tree.js
 !.oh-my-harness/
+!.oh-my-harness/hooks/
+!.oh-my-harness/hooks/tree.mjs
 !.oh-my-harness/tree.md
 # oh-my-harness:end
