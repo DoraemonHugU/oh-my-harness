@@ -20,7 +20,8 @@
 - Claude Code 单目标只使用 `CLAUDE.md` 和 `.claude/skills/`。
 - 多目标同时包含 Claude Code 和 Codex/OpenCode 时，`AGENTS.md` 作为共享 instruction 源，`CLAUDE.md` 只保留 `@AGENTS.md` 引用入口。
 - Codex 专用的 `~/.codex/config.toml` 和 `~/.codex/agents/*` 只在目标包含 Codex 时安装。
-- 不把 Codex agent TOML 直接转换为 Claude/OpenCode subagent 配置；不同 CLI 的 subagent 字段和加载语义不同，当前只安装可共享的 rules + skills。
+- Claude Code 和 OpenCode 只额外安装 reviewer 子代理，不安装 explorer；Claude reviewer 固定 `model: opus`，OpenCode reviewer 不指定 model 以继承当前模型。
+- 不把 Codex agent TOML 直接转换为 Claude/OpenCode subagent 配置；不同 CLI 的 subagent 字段和加载语义不同，当前只安装可共享的 rules、skills 和 reviewer agent。
 
 ## 从现在开始,合理利用你的订阅
 
@@ -78,6 +79,7 @@
 - [Claude Code subagents](https://code.claude.com/docs/en/sub-agents)：Claude Code subagent 的 `.claude/agents/` 和 plugin agent 语义。
 - [OpenCode rules](https://dev.opencode.ai/docs/rules/)：OpenCode 的 `AGENTS.md` / `CLAUDE.md` rules 兼容。
 - [OpenCode skills](https://opencode.ai/docs/skills/)：OpenCode 对 `.opencode/skills`、`.claude/skills`、`.agents/skills` 的发现规则。
+- [OpenCode agents](https://opencode.ai/docs/agents/)：OpenCode 的 `.opencode/agents/` 和全局 `~/.config/opencode/agents/` agent 文件位置。
 
 
 ## 主要功能
@@ -265,6 +267,8 @@ npx @doraemon-hug-u/oh-my-harness init my-project --cli all
 - `<target>/docs/specs/**`
 - `<target>/.agents/skills/**`（Codex / OpenCode）
 - `<target>/.claude/skills/**`（Claude Code）
+- `<target>/.claude/agents/reviewer.md`（Claude Code）
+- `<target>/.opencode/agents/reviewer.md`（OpenCode）
 
 全局级：
 
@@ -272,6 +276,8 @@ npx @doraemon-hug-u/oh-my-harness init my-project --cli all
 - `~/.codex/agents/*`（仅目标包含 Codex）
 - `~/.agents/skills/*`（仅 `--global` 且目标包含 Codex 或 OpenCode）
 - `~/.claude/skills/*`（仅 `--global` 且目标包含 Claude Code）
+- `~/.claude/agents/reviewer.md`（仅 `--global` 且目标包含 Claude Code）
+- `~/.config/opencode/agents/reviewer.md`（仅 `--global` 且目标包含 OpenCode）
 
 ## 命令参数
 
@@ -292,6 +298,13 @@ npx @doraemon-hug-u/oh-my-harness init my-project --cli all
 - Claude-only 目标只写入 `CLAUDE.md`；不会新建或覆盖 `AGENTS.md`。
 - 多目标同时包含 Claude Code 和 Codex/OpenCode 时，写入 `AGENTS.md`，并让 `CLAUDE.md` 只引用 `AGENTS.md`。
 - CLI 会额外提示一条精简后续操作：对比 instruction 文件与对应备份，只迁移仍有价值的项目级规则，再清理备份文件。
+
+## reviewer 子代理行为
+
+- Claude Code / OpenCode 只安装 `reviewer` 子代理，不安装 `explorer`。两者的 explorer 使用各 CLI 自带能力。
+- reviewer prompt body 直接来自 `agents/reviewer.md`；平台 agent 文件只在前面增加各自 frontmatter。
+- Claude Code reviewer frontmatter 使用 `model: opus`。
+- OpenCode reviewer frontmatter 不写 `model`，让它继承当前会话模型。
 
 ## Safety and rollback
 

@@ -103,6 +103,35 @@ function createClaudeInstructionsContent(
     : sourceContent.replaceAll("AGENTS.md", "CLAUDE.md");
 }
 
+function normalizeMarkdownContent(content: string): string {
+  return content.endsWith("\n") ? content : `${content}\n`;
+}
+
+function createClaudeReviewerAgentContent(promptBody: string): string {
+  return [
+    "---",
+    "name: reviewer",
+    "description: Review completed code changes against the implementation plan, project rules, and testing expectations.",
+    "model: opus",
+    "tools: Read, Grep, Glob, Bash",
+    "disallowedTools: Write, Edit, MultiEdit",
+    "---",
+    normalizeMarkdownContent(promptBody),
+  ].join("\n");
+}
+
+function createOpenCodeReviewerAgentContent(promptBody: string): string {
+  return [
+    "---",
+    "description: Review completed code changes against the implementation plan, project rules, and testing expectations.",
+    "mode: subagent",
+    "permission:",
+    "  edit: deny",
+    "---",
+    normalizeMarkdownContent(promptBody),
+  ].join("\n");
+}
+
 async function patchInstructionFile(
   options: InitOptions,
   summary: SummaryEntry[],
@@ -645,6 +674,74 @@ async function installAgentFiles(
   }
 }
 
+async function writeGeneratedAgentFile(
+  options: InitOptions,
+  summary: SummaryEntry[],
+  targetPath: string,
+  content: string,
+): Promise<void> {
+  const exists = await pathExists(targetPath);
+
+  if (exists && !options.force) {
+    summary.push({
+      kind: "skipped",
+      target: targetPath,
+      detail: formatText(options.locale, "agentMarkdownExistsNoForce"),
+    });
+    return;
+  }
+
+  await ensureDirectory(path.dirname(targetPath), options.dryRun);
+  if (!options.dryRun) {
+    await fs.writeFile(targetPath, content, "utf8");
+  }
+  summary.push({
+    kind: exists ? "replaced" : "created",
+    target: targetPath,
+    detail: exists
+      ? formatText(options.locale, "replaceAgentMarkdown")
+      : formatText(options.locale, "createAgentMarkdown"),
+  });
+}
+
+async function installReviewerAgentFiles(
+  options: InitOptions,
+  summary: SummaryEntry[],
+): Promise<void> {
+  if (!includesCli(options, "claude") && !includesCli(options, "opencode")) {
+    return;
+  }
+
+  const promptBody = await fs.readFile(
+    path.join(AGENTS_SOURCE_ROOT, "reviewer.md"),
+    "utf8",
+  );
+
+  if (includesCli(options, "claude")) {
+    const claudeAgentsRoot = options.global
+      ? path.join(os.homedir(), ".claude", "agents")
+      : path.join(options.targetRoot, ".claude", "agents");
+    await writeGeneratedAgentFile(
+      options,
+      summary,
+      path.join(claudeAgentsRoot, "reviewer.md"),
+      createClaudeReviewerAgentContent(promptBody),
+    );
+  }
+
+  if (includesCli(options, "opencode")) {
+    const openCodeAgentsRoot = options.global
+      ? path.join(os.homedir(), ".config", "opencode", "agents")
+      : path.join(options.targetRoot, ".opencode", "agents");
+    await writeGeneratedAgentFile(
+      options,
+      summary,
+      path.join(openCodeAgentsRoot, "reviewer.md"),
+      createOpenCodeReviewerAgentContent(promptBody),
+    );
+  }
+}
+
 function isGitRepository(repoRoot: string): boolean {
   const result = spawnSync(
     "git",
@@ -770,6 +867,7 @@ export async function performInit(options: InitOptions): Promise<SummaryEntry[]>
     await patchCodexConfig(options, summary);
     await installAgentFiles(options, summary);
   }
+  await installReviewerAgentFiles(options, summary);
   await refreshInitialTree(options, summary);
   return summary;
 }

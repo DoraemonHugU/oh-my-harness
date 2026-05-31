@@ -89,9 +89,13 @@ npx @doraemon-hug-u/oh-my-harness init --cli claude --no-tui
 npx @doraemon-hug-u/oh-my-harness init --cli opencode --no-tui
 ```
 
-`--cli claude` 只写入 `CLAUDE.md` + `.claude/skills/`，不会新建或覆盖 `AGENTS.md`。
+`--cli claude` 只写入 `CLAUDE.md` + `.claude/skills/` + `.claude/agents/reviewer.md`，不会新建或覆盖 `AGENTS.md`。
 
-`--cli all` 会写入共享的 `AGENTS.md` + `.agents/skills/`，同时为 Claude Code 写入只引用 `AGENTS.md` 的 `CLAUDE.md` + `.claude/skills/`。Codex 专用 `~/.codex/config.toml` 与 `~/.codex/agents/*` 只在目标包含 Codex 时处理。
+`--cli opencode` 会写入 `AGENTS.md` + `.agents/skills/` + `.opencode/agents/reviewer.md`，不会处理 Codex 专用 config。
+
+`--cli all` 会写入共享的 `AGENTS.md` + `.agents/skills/`，同时为 Claude Code 写入只引用 `AGENTS.md` 的 `CLAUDE.md` + `.claude/skills/` + `.claude/agents/reviewer.md`，并为 OpenCode 写入 `.opencode/agents/reviewer.md`。Codex 专用 `~/.codex/config.toml` 与 `~/.codex/agents/*` 只在目标包含 Codex 时处理。
+
+当前不会安装 Claude/OpenCode 的 explorer 子代理；两者使用各自 CLI 自带 explorer 能力。
 
 ## 输出约定
 

@@ -4,7 +4,7 @@
 
 **Goal:** 让 `oh-my-harness init` 能按目标 CLI 初始化 Codex、Claude Code、OpenCode 或全部三者，同时保持 Codex 现有默认行为。
 
-**Architecture:** 在现有 init pipeline 上增加一个 `cli` 目标维度，不重写模板系统。Project instruction 文件按目标 CLI 自动选择：Codex/OpenCode 写 `AGENTS.md`；Claude-only 只写 `CLAUDE.md`；多目标同时包含 Claude Code 和 Codex/OpenCode 时，写共享 `AGENTS.md`，并让 `CLAUDE.md` 只包含 `@AGENTS.md` 引用入口。Skills 按最小交集复制到目标 CLI 能发现的位置；Codex 专用 agent/config 只在目标包含 Codex 时安装。
+**Architecture:** 在现有 init pipeline 上增加一个 `cli` 目标维度，不重写模板系统。Project instruction 文件按目标 CLI 自动选择：Codex/OpenCode 写 `AGENTS.md`；Claude-only 只写 `CLAUDE.md`；多目标同时包含 Claude Code 和 Codex/OpenCode 时，写共享 `AGENTS.md`，并让 `CLAUDE.md` 只包含 `@AGENTS.md` 引用入口。Skills 按最小交集复制到目标 CLI 能发现的位置；Claude/OpenCode 只安装 reviewer 子代理，不安装 explorer。Codex 专用 agent/config 只在目标包含 Codex 时安装。
 
 **Tech Stack:** Node.js `node:test`、TypeScript、Ink TUI、现有 `performInit` public API。
 
@@ -19,6 +19,7 @@
 - 修改 `src/ui/init-wizard-state.ts`、`src/ui/init-wizard-options.ts`、`src/ui/init-wizard.tsx`：新增 TUI CLI 选择步骤。
 - 修改测试：`src/core/args.test.ts`、`src/core/init.test.ts`、`src/ui/init-wizard-options.test.ts`、`src/ui/init-wizard-state.test.ts`。
 - 修改文档：`README.md`、`docs/agent-init-no-tui.md`。
+- reviewer prompt body 真实来源：`agents/reviewer.md`。
 
 ## 任务 1：CLI 目标参数
 
@@ -167,3 +168,27 @@ Claude-only 写完整 `CLAUDE.md`；Claude 与 Codex/OpenCode 共存时，`CLAUD
 - [x] **步骤 3：补充组合测试**
 
 测试覆盖 `cliTargets: ["claude"]` 不生成 `AGENTS.md`，以及 `cliTargets: ["claude", "opencode"]` 使用 `@AGENTS.md` 引用共享文件。
+
+## 任务 7：Claude/OpenCode reviewer 子代理
+
+**文件：**
+- 修改：`src/core/init.ts`
+- 修改：`src/core/init.test.ts`
+- 修改：`README.md`
+- 修改：`docs/agent-init-no-tui.md`
+
+- [x] **步骤 1：安装 reviewer 而不是 explorer**
+
+Claude Code 目标写 `.claude/agents/reviewer.md` 或 `~/.claude/agents/reviewer.md`；OpenCode 目标写 `.opencode/agents/reviewer.md` 或 `~/.config/opencode/agents/reviewer.md`。不生成 explorer agent 文件。
+
+- [x] **步骤 2：保持 reviewer prompt body 不变**
+
+Claude/OpenCode reviewer 文件只增加平台 frontmatter，正文尾部必须精确等于 `agents/reviewer.md` 的内容。
+
+- [x] **步骤 3：平台模型策略**
+
+Claude reviewer frontmatter 设置 `model: opus`；OpenCode reviewer 不写 `model`，让它继承当前会话模型。
+
+- [x] **步骤 4：补充测试**
+
+测试覆盖 Claude-only、Claude+OpenCode、OpenCode-only 的 reviewer 文件生成，不生成 explorer，并检查 reviewer prompt body 不变。

@@ -37,6 +37,17 @@ test("parseArgs parses the target CLI", () => {
   assert.deepEqual(parsed.cliTargets, ["claude"]);
 });
 
+test("parseArgs expands all target CLIs", () => {
+  const parsed = parseArgs([
+    "init",
+    "--cli",
+    "all",
+    "--no-tui",
+  ]);
+
+  assert.deepEqual(parsed.cliTargets, ["codex", "claude", "opencode"]);
+});
+
 test("resolveInitOptions keeps locale and resolves target root", () => {
   const options = resolveInitOptions(
     {
