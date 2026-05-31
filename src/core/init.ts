@@ -251,11 +251,8 @@ async function patchGitignoreFile(
   summary: SummaryEntry[],
 ): Promise<void> {
   const { targetRoot, dryRun } = options;
-  const sourcePath = path.join(TEMPLATE_REPO_ROOT, "gitignore.template");
   const targetPath = path.join(targetRoot, ".gitignore");
-  const sourceContent = normalizeBlockContent(
-    await fs.readFile(sourcePath, "utf8"),
-  );
+  const sourceContent = createGitignoreTemplateContent(options);
   const exists = await pathExists(targetPath);
   const existingContent = exists ? await fs.readFile(targetPath, "utf8") : "";
   const result = replaceOrAppendBlock(
@@ -286,6 +283,50 @@ async function patchGitignoreFile(
   });
 }
 
+function createGitignoreTemplateContent(options: InitOptions): string {
+  const lines = [GITIGNORE_BEGIN];
+
+  if (includesCli(options, "codex") || includesCli(options, "opencode")) {
+    lines.push("!.agents/", "!.agents/skills/", "!.agents/skills/**");
+  }
+
+  if (includesCli(options, "codex")) {
+    lines.push(
+      "!.codex/",
+      "!.codex/hooks.json",
+    );
+  }
+
+  if (includesCli(options, "claude")) {
+    lines.push(
+      "!.claude/",
+      "!.claude/agents/",
+      "!.claude/agents/reviewer.md",
+      "!.claude/skills/",
+      "!.claude/skills/**",
+    );
+  }
+
+  if (includesCli(options, "opencode")) {
+    lines.push(
+      "!.opencode/",
+      "!.opencode/agents/",
+      "!.opencode/agents/reviewer.md",
+      "!.opencode/plugins/",
+      "!.opencode/plugins/oh-my-harness-tree.js",
+    );
+  }
+
+  lines.push(
+    "!.oh-my-harness/",
+    "!.oh-my-harness/hooks/",
+    "!.oh-my-harness/hooks/tree.mjs",
+    "!.oh-my-harness/tree.md",
+    GITIGNORE_END,
+  );
+  return `${lines.join("\n")}\n`;
+}
+
 async function listTemplateFiles(): Promise<string[]> {
   const collected: string[] = [];
 
@@ -307,6 +348,33 @@ async function listTemplateFiles(): Promise<string[]> {
   return collected;
 }
 
+function shouldInstallTemplateFile(relativePath: string, options: InitOptions): boolean {
+  const normalizedPath = relativePath.split(path.sep).join("/");
+  if (normalizedPath === "AGENTS.md" || normalizedPath === "gitignore.template") {
+    return false;
+  }
+
+  if (!includesCli(options, "codex")) {
+    if (normalizedPath.startsWith(".codex/")) {
+      return false;
+    }
+  }
+
+  if (!includesCli(options, "claude")) {
+    if (normalizedPath.startsWith(".claude/")) {
+      return false;
+    }
+  }
+
+  if (!includesCli(options, "opencode")) {
+    if (normalizedPath.startsWith(".opencode/")) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 async function installProjectTemplates(
   options: InitOptions,
   summary: SummaryEntry[],
@@ -315,7 +383,7 @@ async function installProjectTemplates(
 
   for (const sourcePath of templateFiles) {
     const relativePath = path.relative(TEMPLATE_REPO_ROOT, sourcePath);
-    if (relativePath === "AGENTS.md" || relativePath === "gitignore.template") {
+    if (!shouldInstallTemplateFile(relativePath, options)) {
       continue;
     }
 
@@ -812,7 +880,7 @@ async function refreshInitialTree(
 
   const scriptPath = path.join(
     options.targetRoot,
-    ".codex",
+    ".oh-my-harness",
     "hooks",
     "tree.mjs",
   );

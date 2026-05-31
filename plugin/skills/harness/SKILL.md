@@ -233,7 +233,7 @@ Research PR、`main` / `master` 或明显不匹配任务的分支，都不直接
 
 ### 云端 PR 审查
 
-在支持云端审查的仓库中，按项目要求使用 `.github/codex-review-comment.md` 的评论格式（必须带有 `@codex review`），建立或更新 PR 后提交评论并调用 @codex 进行 review。
+在支持云端审查的仓库中，按项目要求使用 `.github/pr-review-comment.md` 的评论格式（默认必须带有 `@codex review`），建立或更新 PR 后提交评论并调用 @codex 进行 review。
 
 #### 接受云端审查评论
 
@@ -313,7 +313,7 @@ done
 
 - 未经长等待(20分钟)的云端审查,就直接进行了最终回答.
 - 直接给行内审查进行回复评论. 而不是在顶级评论中发送.
-- 审查评论格式没有按照 `.github/codex-review-comment.md` 要求, 导致无法被正确识别和处理.
+- 审查评论格式没有按照 `.github/pr-review-comment.md` 要求, 导致无法被正确识别和处理.
 
 ---
 

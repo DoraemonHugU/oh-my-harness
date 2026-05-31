@@ -5,8 +5,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/tree.mjs\" --hook",
-            "commandWindows": "powershell -NoProfile -Command \"$root = git rev-parse --show-toplevel; if ($LASTEXITCODE -eq 0) { node (Join-Path $root '.codex/hooks/tree.mjs') --hook }\"",
+            "command": "node \"$(git rev-parse --show-toplevel)/.oh-my-harness/hooks/tree.mjs\" --hook",
+            "commandWindows": "powershell -NoProfile -Command \"$root = git rev-parse --show-toplevel; if ($LASTEXITCODE -eq 0) { node (Join-Path $root '.oh-my-harness/hooks/tree.mjs') --hook }\"",
             "timeout": 10,
             "statusMessage": "Refreshing tree"
           }

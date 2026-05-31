@@ -65,7 +65,7 @@ Implementation PR 是真实代码交付容器。
 - 承载代码实现、验证摘要和风险摘要；不承载研究正文。
 - 必须引用绑定的 `Implementation Plan`。
 - 如果来自 Research PR，必须 mention 对应 Research PR。
-- 创建或更新后，按 `.github/codex-review-comment.md` 准备审查评论。
+- 创建或更新后，按 `.github/pr-review-comment.md` 准备审查评论。
 
 
 ### Spec PR
@@ -128,7 +128,7 @@ flowchart TD
 
 ## 审查与交付
 
-- 审查评论模板：`.github/codex-review-comment.md`
+- 审查评论模板：`.github/pr-review-comment.md`
 - 审查评论必须包含明确的 `<base_sha>..<head_sha>`。
 - Research PR 如需审查，仍使用同一模板，并在背景或补充信息中明确研究性质和审查重点。
 - 本地实现路径中的验证、review、merge 由 `harness` 负责；本文件不展开这些运行时细节。

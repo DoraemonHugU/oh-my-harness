@@ -41,6 +41,14 @@ test("performInit initializes git and generates the initial tree file", async ()
 
     assert.match(tree, /# Tree/);
     assert.match(tree, /git ls-files --cached --others --exclude-standard/);
+    await stat(path.join(targetRoot, ".oh-my-harness", "hooks", "tree.mjs"));
+    await stat(path.join(targetRoot, ".codex", "hooks.json"));
+    await stat(path.join(targetRoot, ".github", "pr-review-comment.md"));
+    const gitignore = await readFile(path.join(targetRoot, ".gitignore"), "utf8");
+    assert.match(gitignore, /!\.oh-my-harness\/hooks\/tree\.mjs/);
+    assert.match(gitignore, /!\.codex\/hooks\.json/);
+    assert.doesNotMatch(gitignore, /!\.claude\//);
+    assert.doesNotMatch(gitignore, /!\.opencode\//);
     assert(summary.some((entry) =>
       entry.target.endsWith(`${path.sep}.git`) && entry.kind === "created"
     ));
@@ -96,6 +104,30 @@ test("performInit installs Claude project instructions and skills", async () => 
       stat(path.join(targetRoot, "AGENTS.md")),
       /ENOENT/,
     );
+    await stat(path.join(targetRoot, ".oh-my-harness", "hooks", "tree.mjs"));
+    await stat(path.join(
+      targetRoot,
+      ".claude",
+      "skills",
+      "oh-my-harness-hooks",
+      ".claude-plugin",
+      "plugin.json",
+    ));
+    await stat(path.join(
+      targetRoot,
+      ".claude",
+      "skills",
+      "oh-my-harness-hooks",
+      "hooks",
+      "hooks.json",
+    ));
+    await stat(path.join(targetRoot, ".github", "pr-review-comment.md"));
+    const gitignore = await readFile(path.join(targetRoot, ".gitignore"), "utf8");
+    assert.match(gitignore, /!\.oh-my-harness\/hooks\/tree\.mjs/);
+    assert.match(gitignore, /!\.claude\/skills\/\*\*/);
+    assert.match(gitignore, /!\.claude\/agents\/reviewer\.md/);
+    assert.doesNotMatch(gitignore, /!\.codex\//);
+    assert.doesNotMatch(gitignore, /!\.opencode\//);
     await stat(path.join(targetRoot, ".claude", "skills", "harness", "SKILL.md"));
     await stat(path.join(targetRoot, ".claude", "agents", "reviewer.md"));
     await assert.rejects(
@@ -157,6 +189,20 @@ test("performInit lets Claude import AGENTS when another AGENTS-based CLI is sel
     await stat(path.join(targetRoot, ".claude", "skills", "harness", "SKILL.md"));
     await stat(path.join(targetRoot, ".opencode", "agents", "reviewer.md"));
     await stat(path.join(targetRoot, ".claude", "agents", "reviewer.md"));
+    await stat(path.join(targetRoot, ".oh-my-harness", "hooks", "tree.mjs"));
+    await stat(path.join(
+      targetRoot,
+      ".claude",
+      "skills",
+      "oh-my-harness-hooks",
+      ".claude-plugin",
+      "plugin.json",
+    ));
+    await stat(path.join(targetRoot, ".opencode", "plugins", "oh-my-harness-tree.js"));
+    await assert.rejects(
+      stat(path.join(targetRoot, ".codex", "hooks.json")),
+      /ENOENT/,
+    );
     await assert.rejects(
       stat(path.join(targetRoot, ".opencode", "agents", "explorer.md")),
       /ENOENT/,
@@ -261,6 +307,20 @@ test("performInit installs OpenCode project instructions without Codex config", 
     await stat(path.join(targetRoot, "AGENTS.md"));
     await stat(path.join(targetRoot, ".agents", "skills", "harness", "SKILL.md"));
     await stat(path.join(targetRoot, ".opencode", "agents", "reviewer.md"));
+    await stat(path.join(targetRoot, ".oh-my-harness", "hooks", "tree.mjs"));
+    await stat(path.join(targetRoot, ".opencode", "plugins", "oh-my-harness-tree.js"));
+    await assert.rejects(
+      stat(path.join(targetRoot, ".codex", "hooks.json")),
+      /ENOENT/,
+    );
+    await stat(path.join(targetRoot, ".github", "pr-review-comment.md"));
+    const gitignore = await readFile(path.join(targetRoot, ".gitignore"), "utf8");
+    assert.match(gitignore, /!\.oh-my-harness\/hooks\/tree\.mjs/);
+    assert.match(gitignore, /!\.agents\/skills\/\*\*/);
+    assert.match(gitignore, /!\.opencode\/agents\/reviewer\.md/);
+    assert.match(gitignore, /!\.opencode\/plugins\/oh-my-harness-tree\.js/);
+    assert.doesNotMatch(gitignore, /!\.codex\//);
+    assert.doesNotMatch(gitignore, /!\.claude\//);
     await assert.rejects(
       stat(path.join(targetRoot, ".opencode", "agents", "explorer.md")),
       /ENOENT/,

@@ -192,3 +192,52 @@ Claude reviewer frontmatter 设置 `model: opus`；OpenCode reviewer 不写 `mod
 - [x] **步骤 4：补充测试**
 
 测试覆盖 Claude-only、Claude+OpenCode、OpenCode-only 的 reviewer 文件生成，不生成 explorer，并检查 reviewer prompt body 不变。
+
+## 任务 8：非 Codex 模式隔离和卸载文档
+
+**文件：**
+- 修改：`src/core/init.ts`
+- 修改：`src/core/init.test.ts`
+- 修改：`README.md`
+- 修改：`docs/agent-init-no-tui.md`
+
+- [x] **步骤 1：过滤 Codex-only 模板**
+
+`--cli claude` 和 `--cli opencode` 不写 `.codex/hooks.json`。`.github/pr-review-comment.md` 是通用 PR review 模板，所有目标 CLI 都会写入。
+
+- [x] **步骤 2：动态生成 `.gitignore` block**
+
+`.gitignore` 只放行当前目标 CLI 会写入的 dot directories：Codex 放行 `.codex`，Claude 放行 `.claude`，OpenCode 放行 `.opencode`，Codex/OpenCode 放行 `.agents`。
+
+- [x] **步骤 3：补删除 / 卸载文档**
+
+当前不实现自动 `uninstall` 子命令；README 和 no-TUI 文档列出按目标 CLI 删除的项目级和全局级路径。
+
+- [x] **步骤 4：明确 prompt 驱动安装边界**
+
+支持 agent 根据 prompt 执行 `init --no-tui`；不支持把任意用户 prompt body 写成 reviewer agent，reviewer 正文固定来自 `agents/reviewer.md`。
+
+## 任务 9：跨平台树刷新 hook
+
+**文件：**
+- 修改：`src/core/init.ts`
+- 修改：`src/core/init.test.ts`
+- 移动：`templates/repo/.codex/hooks/tree.mjs` -> `templates/repo/.oh-my-harness/hooks/tree.mjs`
+- 修改：`templates/repo/.codex/hooks.json`
+- 新增：`templates/repo/.claude/skills/oh-my-harness-hooks/.claude-plugin/plugin.json`
+- 新增：`templates/repo/.claude/skills/oh-my-harness-hooks/hooks/hooks.json`
+- 新增：`templates/repo/.opencode/plugins/oh-my-harness-tree.js`
+- 修改：`README.md`
+- 修改：`docs/agent-init-no-tui.md`
+
+- [x] **步骤 1：迁移共享脚本**
+
+树索引生成逻辑从 Codex 专属 `.codex/hooks/tree.mjs` 迁移到 `.oh-my-harness/hooks/tree.mjs`，`refreshInitialTree()` 也改为调用共享脚本。
+
+- [x] **步骤 2：保留平台触发器**
+
+Codex 保留 `.codex/hooks.json`，Claude Code 使用项目级 `.claude/skills/oh-my-harness-hooks/` skills-directory plugin，OpenCode 使用项目级 `.opencode/plugins/oh-my-harness-tree.js` 本地 plugin。三者触发同一个共享脚本。
+
+- [x] **步骤 3：更新过滤和卸载文档**
+
+非目标 CLI 不写入对应平台触发器；所有目标都会写入 `.oh-my-harness/hooks/tree.mjs`。删除文档补充 `.claude/skills/oh-my-harness-hooks/`、`.opencode/plugins/oh-my-harness-tree.js` 和共享 hook 脚本。

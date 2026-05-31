@@ -200,7 +200,7 @@ Reviewer：“修复 1-6”
 
 ## GitHub 线程回复
 
-一轮的审查修复后,按照`codex-review-comment.md`模板撰写审查评论，直接回复在 GitHub PR 顶级线程中从而进入下一轮的审查。
+一轮的审查修复后,按照`pr-review-comment.md`模板撰写审查评论，直接回复在 GitHub PR 顶级线程中从而进入下一轮的审查。
 
 ## 核心结论
 
