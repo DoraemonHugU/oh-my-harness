@@ -3,7 +3,7 @@
 Use this file for navigation only. Verify implementation details by reading source files directly.
 
 - Source: `git ls-files --cached --others --exclude-standard`
-- Entries: 74
+- Entries: 76
 
 ```text
 ./
@@ -64,6 +64,7 @@ Use this file for navigation only. Verify implementation details by reading sour
 │   ├── core/
 │   │   ├── args.test.ts
 │   │   ├── args.ts
+│   │   ├── cli-entry.test.ts
 │   │   ├── init.test.ts
 │   │   ├── init.ts
 │   │   ├── runtime.test.ts
@@ -115,6 +116,7 @@ Use this file for navigation only. Verify implementation details by reading sour
 ├── LICENSE
 ├── package-lock.json
 ├── package.json
+├── README.en.md
 ├── README.md
 ├── THIRD_PARTY_NOTICES.md
 └── tsconfig.json

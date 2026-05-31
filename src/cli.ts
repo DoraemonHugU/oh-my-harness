@@ -34,6 +34,7 @@ async function main(): Promise<void> {
     parsed.global ||
     parsed.dryRun ||
     parsed.noTui ||
+    parsed.cliTargets.length > 0 ||
     parsed.lang !== null;
   const interactive = isInteractiveTerminal();
 

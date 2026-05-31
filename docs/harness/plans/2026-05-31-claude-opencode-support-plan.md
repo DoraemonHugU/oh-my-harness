@@ -241,3 +241,25 @@ Codex 保留 `.codex/hooks.json`，Claude Code 使用项目级 `.claude/skills/o
 - [x] **步骤 3：更新过滤和卸载文档**
 
 非目标 CLI 不写入对应平台触发器；所有目标都会写入 `.oh-my-harness/hooks/tree.mjs`。删除文档补充 `.claude/skills/oh-my-harness-hooks/`、`.opencode/plugins/oh-my-harness-tree.js` 和共享 hook 脚本。
+
+## 任务 10：双语 i18n 与审查反馈收口
+
+**文件：**
+- 修改：`src/cli.ts`
+- 新增：`src/core/cli-entry.test.ts`
+- 修改：`src/core/text.ts`
+- 修改：`README.md`
+- 新增：`README.en.md`
+- 修改：`package.json`
+
+- [x] **步骤 1：补英文 README**
+
+新增 `README.en.md`，并在中英文 README 顶部互链。发布文件清单加入 `README.en.md`，确保 npm 包包含英文文档。
+
+- [x] **步骤 2：修复云端审查指出的 CLI/TUI 问题**
+
+TUI 中英文步骤计数统一为 7 步；`--global` 与 scope 文案改成按目标 CLI 对应目录描述；`--cli` 参与 standalone option 判断，避免无 `init` 时静默成功显示 usage。
+
+- [x] **步骤 3：补回归测试**
+
+新增 CLI 入口测试，覆盖 `oh-my-harness --cli claude --lang en` 在非交互环境中返回 missing-command 错误。

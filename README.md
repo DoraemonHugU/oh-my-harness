@@ -6,6 +6,8 @@
 ![node](https://img.shields.io/badge/Node.js-%3E%3D18-43853d)
 ![typescript](https://img.shields.io/badge/TypeScript-6.0%2B-3178c6)
 
+语言: [简体中文](./README.md) | [English](./README.en.md)
+
 中文优先的 Codex / Claude Code / OpenCode `PR-first / plan-first` implementation harness。
 
 `oh-my-harness` 是一个用于初始化和运行 `PR-first / plan-first` 工作流的轻量 harness：它提供 CLI、仓库模板、skills 和可选的全局配置 patch，把 research、plan、PR 准备和 review 尽量放到更低成本的环境里，再把必要的本地代码编写、验证和交付留给本地 coding agent。
